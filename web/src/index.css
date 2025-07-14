@@ -10,8 +10,8 @@
 
 html {
   scroll-behavior: smooth;
-  /* overflow-y: hidden; */
+  overflow-y: clip;
   background-color: var(--color-neutral-950)
 }
 
-@plugin "tailgrids/plugin";
+/* @plugin "tailgrids/plugin"; */

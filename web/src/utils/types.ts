@@ -1,0 +1,1 @@
+export type AuthStageType = "email" | "basic" | "interests" | "verify";

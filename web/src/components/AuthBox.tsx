@@ -1,12 +1,5 @@
-import React, { useEffect, useState } from "react";
-import {
-  Mail,
-  ArrowLeft,
-  ChevronDown,
-  Divide,
-  ArrowRight,
-  GanttChart,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Mail, ChevronDown, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   getAuth,
@@ -17,13 +10,14 @@ import {
 } from "firebase/auth";
 import Select, { components, type StylesConfig } from "react-select";
 import countryList from "react-select-country-list";
+import type { AuthStageType } from "../utils/types";
+import { INTERESTS, LANGUAGES } from "../utils/constants";
+import BackButton from "./BackButton";
 
 const auth = getAuth();
 
-type Stage = "email" | "basic" | "interests" | "verify";
-
 const primaryBtn =
-  "bg-primary text-primary-foreground hover:bg-primary/80 cursor-pointer transition-all duration-200 active:scale-95 uppercase tracking-widest font-bold";
+  "bg-primary text-primary-foreground hover:bg-primary/80 cursor-pointer transition-all duration-200 active:scale-95 uppercase tracking-widest font-bold disabled:opacity-40 disabled:cursor-not-allowed";
 const mutedInput =
   "rounded-md bg-muted px-3 py-2 text-sm outline-none focus:ring-2 ring-primary/80 transition-all duration-200";
 
@@ -31,7 +25,6 @@ const wrapperAnim = {
   initial: { opacity: 0, y: 30 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -20 },
-  //   transition: { duration: 0.4, ease: [0.25, 0.8, 0.25, 1] },
 };
 
 const darkSelectStyles: StylesConfig = {
@@ -40,6 +33,7 @@ const darkSelectStyles: StylesConfig = {
     background: "#1b1b1b",
     border: "none",
     minHeight: "2.6rem",
+    cursor: "pointer",
   }),
   singleValue: (b) => ({ ...b, color: "#fff" }),
   input: (b) => ({ ...b, color: "#fff" }),
@@ -59,33 +53,54 @@ const DropdownIndicator = (props: any) => (
   </components.DropdownIndicator>
 );
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isValidEmail = (e: string) => emailRegex.test(e);
+
 export default function AuthBox() {
-  const [stage, setStage] = useState<Stage>("email");
+  const [stage, setStage] = useState<AuthStageType>("email");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [country, setCountry] = useState<{
     label: string;
     value: string;
   } | null>(null);
-  const [language, setLanguage] = useState("");
+  const [language, setLanguage] = useState<{
+    label: string;
+    value: string;
+  } | null>(null);
   const [codeSent, setCodeSent] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [errors, setErrors] = useState<string | null>(null);
 
-  /* ───────────────── Email flow */
+  const emailValid = isValidEmail(email);
+  const basicValid = name.trim().length > 1 && country && language;
+  const interestsValid = selected.size > 0;
+
   const handleEmailContinue = async () => {
-    if (!email) return;
-    const methods = await fetchSignInMethodsForEmail(auth, email);
-    if (methods.length) {
-      await sendMagicLink();
-      setStage("verify");
-    } else {
-      setStage("basic");
+    if (!emailValid) return setErrors("Please enter a valid email address");
+    try {
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+      if (methods.length) {
+        await sendMagicLink();
+        setStage("verify");
+      } else {
+        setStage("basic");
+      }
+    } catch (err) {
+      setErrors("Failed to check email. Please try again later.");
     }
   };
-  const handleBasicContinue = () => setStage("interests");
+  const handleBasicContinue = () => {
+    if (!basicValid) return setErrors("Fill out all required fields");
+    setStage("interests");
+  };
   const handleInterestsContinue = async () => {
+    if (!interestsValid) return setErrors("Select at least one interest");
     await sendMagicLink();
     setStage("verify");
   };
+
   const sendMagicLink = async () => {
     if (codeSent) return;
     await sendSignInLinkToEmail(auth, email, {
@@ -95,6 +110,7 @@ export default function AuthBox() {
     localStorage.setItem("emailForSignIn", email);
     setCodeSent(true);
   };
+
   useEffect(() => {
     if (isSignInWithEmailLink(auth, window.location.href)) {
       const storedEmail = localStorage.getItem("emailForSignIn") || email;
@@ -104,37 +120,17 @@ export default function AuthBox() {
       });
     }
   }, [email]);
-
-  const Divider = () => (
-    <div className="flex items-center gap-2 my-6">
-      <span className="flex-1 h-px bg-muted-foreground/40" />
-      <span className="text-xs tracking-widest opacity-60">OR</span>
-      <span className="flex-1 h-px bg-muted-foreground/40" />
-    </div>
-  );
-
-  const Terms = () => (
-    <p className="text-xs mt-3 opacity-60">
-      Terms and conditions<span className="text-primary font-semibold">**</span>
-    </p>
-  );
-
-  const BackButton = () => (
-    <motion.button
-      whileTap={{ scale: 0.9 }}
-      onClick={() => setStage("email")}
-      className="flex items-center gap-1 text-sm opacity-80 hover:opacity-100 mb-4 cursor-pointer transition-all duration-300"
-    >
-      <ArrowLeft size={18} /> Back
-    </motion.button>
-  );
-
-  /* ───────────────── UI */
   return (
     <div className="mx-auto max-w-xs min-w-xs text-center pt-6">
-      {stage !== "email" && <BackButton />}
+      {stage !== "email" && (
+        <BackButton
+          onClick={() => {
+            setErrors(null);
+            setStage("email");
+          }}
+        />
+      )}
 
-      {/* Logo */}
       <motion.img
         src="/icon.png"
         alt="logo"
@@ -144,13 +140,20 @@ export default function AuthBox() {
         transition={{ duration: 0.5, ease: "backOut" }}
       />
 
+      {errors ? (
+        <div
+          className="bg-destructive/20 text-destructive text-sm rounded-md px-3 py-2 mb-4"
+          role="alert"
+        >
+          {errors}
+        </div>
+      ) : null}
+
       <AnimatePresence mode="wait">
         {stage === "email" && (
           <motion.div key="email" {...wrapperAnim}>
-            <h2 className="text-3xl font-extrabold mb-0">
-              <span className="text-white">Welcome</span>
-            </h2>
-            <p className="text-sm mb-6 opacity-100">
+            <h2 className="text-3xl font-extrabold mb-0 text-white">Welcome</h2>
+            <p className="text-sm mb-6">
               Enter your <span className="text-primary">email</span> to
               continue.
             </p>
@@ -164,7 +167,10 @@ export default function AuthBox() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setErrors(null);
+                }}
                 className={`pl-10 w-full ${mutedInput}`}
                 placeholder="you@example.com"
               />
@@ -172,14 +178,22 @@ export default function AuthBox() {
             <motion.button
               onClick={handleEmailContinue}
               className={`mt-6 w-full rounded-md py-2 ${primaryBtn}`}
+              disabled={!emailValid}
             >
               Continue
             </motion.button>
 
-            <Terms />
-            <Divider />
+            <p className="text-xs mt-3 opacity-60">
+              Terms and conditions
+              <span className="text-primary font-semibold">**</span>
+            </p>
+            <div className="flex items-center gap-2 my-6">
+              <span className="flex-1 h-px bg-white/40" />
+              <span className="text-xs tracking-widest opacity-60">OR</span>
+              <span className="flex-1 h-px bg-white/40" />
+            </div>
             <motion.button className="w-full border border-muted-foreground/60 rounded-md py-2 flex items-center justify-center gap-2 cursor-pointer">
-              {/* Simple G icon */}
+              {/* Google icon */}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 48 48"
@@ -209,10 +223,10 @@ export default function AuthBox() {
 
         {stage === "basic" && (
           <motion.div key="basic" {...wrapperAnim}>
-            <h2 className="text-3xl font-extrabold mb-0">
-              <span className="text-white">Basic Info</span>
+            <h2 className="text-3xl font-extrabold mb-0 text-white">
+              Basic Info
             </h2>
-            <p className="text-sm mb-5 opacity-100">
+            <p className="text-sm mb-5">
               Let us get to <span className="text-primary">know</span> you
               better.
             </p>
@@ -220,7 +234,10 @@ export default function AuthBox() {
             <label className="block text-sm text-left mb-1">Name</label>
             <input
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                setErrors(null);
+              }}
               placeholder="John Doe"
               className={`w-full mb-3 ${mutedInput}`}
             />
@@ -230,38 +247,36 @@ export default function AuthBox() {
               instanceId="country"
               options={countryList().getData()}
               value={country}
-              onChange={(v) => setCountry(v as any)}
+              onChange={(v) => {
+                setCountry(v as any);
+                setErrors(null);
+              }}
               placeholder="Select country"
+              styles={darkSelectStyles}
+              components={{ DropdownIndicator }}
+              className="mb-3 text-left"
+              menuShouldScrollIntoView={false}
+            />
+
+            <label className="block text-sm text-left mb-1">Language</label>
+            <Select
+              instanceId="language"
+              options={LANGUAGES}
+              value={language}
+              onChange={(val) => {
+                setLanguage(val as any);
+                setErrors(null);
+              }}
+              placeholder="Select language"
               styles={darkSelectStyles}
               components={{ DropdownIndicator }}
               className="mb-3 text-left"
             />
 
-            <label className="block text-sm text-left mb-1">Language</label>
-            <div className="relative">
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className={`appearance-none w-full pr-8 cursor-pointer ${mutedInput}`}
-              >
-                <option value="" disabled>
-                  Select language
-                </option>
-                {["English", "Español", "Français", "Deutsch", "Português"].map(
-                  (l) => (
-                    <option key={l}>{l}</option>
-                  )
-                )}
-              </select>
-              <ChevronDown
-                size={18}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-              />
-            </div>
-
             <motion.button
               onClick={handleBasicContinue}
               className={`mt-8 w-full rounded-md py-2 ${primaryBtn}`}
+              disabled={!basicValid}
             >
               Continue
             </motion.button>
@@ -270,17 +285,64 @@ export default function AuthBox() {
 
         {stage === "interests" && (
           <motion.div key="interests" {...wrapperAnim}>
-            <h2 className="text-3xl font-extrabold mb-0">
-              <span className="text-white">Interests</span>
+            <h2 className="text-3xl font-extrabold mb-0 text-white">
+              Interests
             </h2>
-            <p className="text-sm mb-4 opacity-100">
-              This helps us <span className="text-primary">personalize</span>{" "}
+            <p className="text-sm mb-4">
+              These help us <span className="text-primary">personalize</span>{" "}
               your experience.
             </p>
-            {/* TODO interests */}
+
+            <input
+              type="text"
+              placeholder="Search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={`w-full mb-4 ${mutedInput}`}
+            />
+
+            <div className="grid grid-cols-2 gap-4 max-h-72 overflow-y-auto pr-1">
+              {INTERESTS.filter(({ label }) =>
+                label.toLowerCase().includes(searchTerm.toLowerCase())
+              ).map(({ id, label, img }) => {
+                const isSelected = selected.has(id);
+                return (
+                  <div
+                    key={id}
+                    onClick={() => {
+                      setSelected((prev) => {
+                        const next = new Set(prev);
+                        next.has(id) ? next.delete(id) : next.add(id);
+                        return next;
+                      });
+                      setErrors(null);
+                    }}
+                    className={`relative cursor-pointer rounded-xl overflow-hidden border-2 ${
+                      isSelected ? "border-primary" : "border-transparent"
+                    }`}
+                  >
+                    <img
+                      src={img}
+                      alt={label}
+                      className="w-full h-24 object-cover"
+                    />
+                    {isSelected && (
+                      <div className="absolute top-1 right-1 bg-primary p-1 rounded-full">
+                        <Check size={14} className="text-white" />
+                      </div>
+                    )}
+                    <p className="text-xs mt-2 px-1 pb-2 truncate">{label}</p>
+                  </div>
+                );
+              })}
+            </div>
+
             <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={handleInterestsContinue}
               className={`w-full rounded-md py-2 mt-6 ${primaryBtn}`}
+              disabled={!interestsValid}
             >
               Continue
             </motion.button>
@@ -299,7 +361,7 @@ export default function AuthBox() {
             <motion.button
               whileTap={{ scale: 0.95 }}
               disabled
-              className={`w-full rounded-md py-2 ${primaryBtn} opacity-60 cursor-not-allowed`}
+              className={`w-full rounded-md py-2 ${primaryBtn}`}
             >
               Waiting for verification…
             </motion.button>
