@@ -1,3 +1,17 @@
 @import "tailwindcss";
 
+/* add 5BB665 as primary and 1e1e1e as secondary */
+
+@theme {
+  --color-primary: #5BB665;
+  --color-muted: #1e1e1e;
+  --font-sans: Inter;
+}
+
+html {
+  scroll-behavior: smooth;
+  /* overflow-y: hidden; */
+  background-color: var(--color-neutral-950)
+}
+
 @plugin "tailgrids/plugin";
