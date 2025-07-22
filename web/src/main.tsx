@@ -5,6 +5,13 @@ import { createBrowserRouter, RouterProvider } from "react-router";
 import Root from "./pages/Root";
 import Home from "./pages/Home";
 import About from "./pages/About";
+import Dashboard from "./pages/Dashboard";
+import Search from "./pages/Search";
+import Add from "./pages/Add";
+import Trade from "./pages/Trade";
+import Messages from "./pages/Messages";
+import Profile from "./pages/Profile";
+import Cart from "./pages/Cart";
 
 const router = createBrowserRouter([
   {
@@ -24,6 +31,34 @@ const router = createBrowserRouter([
       //     { path: "trending", Component: ConcertsTrending },
       //   ],
       // },
+      {
+        path: "dashboard",
+        Component: Dashboard,
+      },
+      {
+        path: "search",
+        Component: Search,
+      },
+      {
+        path: "add",
+        Component: Add,
+      },
+      {
+        path: "trade",
+        Component: Trade,
+      },
+      {
+        path: "messages",
+        Component: Messages,
+      },
+      {
+        path: "cart",
+        Component: Cart,
+      },
+      {
+        path: "profile",
+        Component: Profile,
+      },
     ],
   },
 ]);

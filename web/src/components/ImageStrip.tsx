@@ -1,5 +1,5 @@
-import React, { useRef, useState } from "react";
-import { useAnimationFrame } from "framer-motion";
+import { useRef, useState } from "react";
+import { motion, useAnimationFrame } from "framer-motion";
 
 export interface StripProps {
   start: { x: number; y: number };
@@ -10,14 +10,14 @@ export interface StripProps {
   imgHeightTW?: string;
 }
 
-const Strip: React.FC<StripProps> = ({
+export default function Strip({
   start,
   end,
   speed = 40,
   className = "",
   imgWidthTW = "w-40",
   imgHeightTW = "h-32",
-}) => {
+}: StripProps) {
   if (!start || !end) return null;
 
   const dx = end.x - start.x;
@@ -68,7 +68,10 @@ const Strip: React.FC<StripProps> = ({
     );
 
     return (
-      <div
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         ref={containerRef}
         className="flex whitespace-nowrap"
         style={{ transform: `translateX(${offset}px)` }}
@@ -76,12 +79,16 @@ const Strip: React.FC<StripProps> = ({
         {displayed.map((src, i) => (
           <img key={i} src={src} className={imgClasses} draggable={false} />
         ))}
-      </div>
+      </motion.div>
     );
   };
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 1, ease: "easeInOut" }}
       className={`absolute pointer-events-none overflow-hidden ${className}`}
       style={{
         top: start.y,
@@ -94,8 +101,6 @@ const Strip: React.FC<StripProps> = ({
       <RowScroller direction="right" images={topSet} />
       <div className="h-2" />
       <RowScroller direction="left" images={botSet} />
-    </div>
+    </motion.div>
   );
-};
-
-export default Strip;
+}

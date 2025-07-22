@@ -1,27 +1,70 @@
-import { Outlet, useNavigation } from "react-router";
+import { useEffect, useState } from "react";
+import { Outlet, useNavigation, useLocation, useNavigate } from "react-router";
 import GlobalSpinner from "../components/GlobalSpinner";
-import { initializeApp } from "firebase/app";
-
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FB_API_KEY,
-  authDomain: import.meta.env.VITE_FB_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FB_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FB_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FB_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FB_APP_ID,
-  measurementId: import.meta.env.VITE_FB_MEASUREMENT_ID,
-};
-
-initializeApp(firebaseConfig);
+import Sidebar from "../components/Sidebar";
+import "../utils/firebase";
+import { AnimatePresence } from "motion/react";
+import { useAuth } from "../hooks/useAuth";
 
 export default function Root() {
+  const { isSignedIn, pending } = useAuth();
+  const [spinnerVisible, setSpinnerVisible] = useState(true);
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
+
   const navigation = useNavigation();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const showSidebar = !["/", "/about"].includes(location.pathname);
+
+  useEffect(() => {
+    if (
+      !pending &&
+      !isSignedIn &&
+      !["/", "/about"].includes(location.pathname)
+    ) {
+      navigate("/");
+    }
+  }, [isSignedIn, location.pathname, pending]);
+
+  useEffect(() => {
+    const handleLoad = () => setAssetsLoaded(true);
+
+    if (document.readyState === "complete") {
+      handleLoad();
+    } else {
+      window.addEventListener("load", handleLoad);
+    }
+
+    return () => window.removeEventListener("load", handleLoad);
+  }, []);
+
   const isNavigating = Boolean(navigation.location);
+
+  useEffect(() => {
+    if (assetsLoaded && !isNavigating) {
+      const timeout = setTimeout(() => setSpinnerVisible(false), 0);
+      return () => clearTimeout(timeout);
+    }
+  }, [assetsLoaded, isNavigating]);
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      {isNavigating && <GlobalSpinner />}
-      <Outlet />
+      {/* <AnimatePresence>
+        {spinnerVisible && location.pathname !== "/" && (
+          <GlobalSpinner
+            key="global-spinner"
+            onDone={() => setSpinnerVisible(false)}
+          />
+        )}
+      </AnimatePresence> */}
+
+      {showSidebar && <Sidebar />}
+      <main className={`${showSidebar ? "pl-14 md:pl-20" : ""}`}>
+        <AnimatePresence mode="wait">
+          <Outlet key={location.pathname} />
+        </AnimatePresence>
+      </main>
     </div>
   );
 }
