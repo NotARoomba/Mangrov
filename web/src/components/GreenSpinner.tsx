@@ -6,8 +6,8 @@ export default function GreenSpinner() {
       className="w-8 h-8 border-6 border-green-500 border-t-transparent rounded-full animate-spin"
       aria-label="Loading"
       role="status"
-      initial={{ rotate: 0 }}
-      animate={{ rotate: 360 }}
+      initial={{ rotate: 0, opacity: 0 }}
+      animate={{ rotate: 360, opacity: 1 }}
       transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
     />
   );

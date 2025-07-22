@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { auth } from "../utils/firebase";
 import type { User } from "firebase/auth";
+import { set } from "lodash";
 
 export function useAuth() {
   const [authState, setAuthState] = useState<{

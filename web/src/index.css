@@ -8,9 +8,9 @@
   --font-sans: Inter;
 }
 
-html {
+html, body, #root {
   scroll-behavior: smooth;
-  overflow-y: clip;
+  overflow-y: hidden;
   background-color: var(--color-neutral-950)
 }
 
