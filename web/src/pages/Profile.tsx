@@ -11,10 +11,8 @@ import { db } from "../utils/firebase";
 import { useAuth } from "../hooks/useAuth";
 import PageWrapper from "../components/PageWrapper";
 import EditProfileModal from "../components/EditProfileModal";
-import { LANGUAGES } from "../utils/constants";
-import countryList from "react-select-country-list";
 import { Bookmark, Grid3x3, User } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion"; // 👈 ADD THIS
+import { AnimatePresence, motion } from "framer-motion";
 
 const getFlagEmoji = (countryCode: string) => {
   if (!countryCode) return "";
@@ -76,11 +74,7 @@ export default function Profile() {
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         const userDoc = snap.data();
-        setUserData({
-          ...userDoc,
-          name: user.displayName,
-          avatar: user.photoURL,
-        });
+        setUserData(userDoc);
 
         // Fetch user's own posts
         const postsQuery = query(

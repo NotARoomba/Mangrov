@@ -124,6 +124,8 @@ export default function AuthBox() {
           displayName: name,
         });
         await setDoc(doc(db, "users", res.user.uid), {
+          name,
+          avatar: res.user.photoURL || "",
           country: country?.value || "",
           language: language?.value || "",
           interests: Array.from(selected),

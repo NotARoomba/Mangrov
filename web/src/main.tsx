@@ -13,6 +13,8 @@ import Trade from "./pages/Trade";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import Cart from "./pages/Cart";
+import { CartProvider } from "./hooks/useCart";
+import { AuthProvider } from "./hooks/useAuth";
 
 const router = createBrowserRouter([
   {
@@ -66,6 +68,10 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <CartProvider>
+        <RouterProvider router={router} />
+      </CartProvider>
+    </AuthProvider>
   </StrictMode>
 );

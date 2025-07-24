@@ -12,6 +12,7 @@
   "dependencies": {
     "@icons-pack/react-simple-icons": "^13.5.0",
     "@tailwindcss/vite": "^4.1.11",
+    "dayjs": "^1.11.13",
     "firebase": "^11.10.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.525.0",
@@ -24,6 +25,8 @@
     "react-router": "^7.6.3",
     "react-select": "^5.10.2",
     "react-select-country-list": "^2.2.3",
+    "react-slick": "^0.30.3",
+    "slick-carousel": "^1.8.1",
     "tailgrids": "^2.3.0",
     "tailwindcss": "^4.1.11"
   },
@@ -34,6 +37,7 @@
     "@types/react-dom": "^19.1.6",
     "@types/react-responsive-masonry": "^2.6.0",
     "@types/react-select-country-list": "^2.2.3",
+    "@types/react-slick": "^0.23.13",
     "@vitejs/plugin-react": "^4.6.0",
     "eslint": "^9.30.1",
     "eslint-plugin-react-hooks": "^5.2.0",

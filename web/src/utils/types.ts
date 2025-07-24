@@ -4,12 +4,14 @@ export type Post = {
   id: string;
   caption: string;
   images: string[];
+  description: string;
   keywords: string[];
   niche: string[];
-  likes: string[];
+  likes: boolean;
   saves: boolean;
-  businessId: string;
+  business: string;
   comments: boolean;
   date: any;
+  url: string;
   productIds: string[];
 };

@@ -99,6 +99,8 @@ export default function EditProfileModal({
     }
 
     const data = {
+      name,
+      avatar: photoURL,
       country: country?.value || initialData.country,
       language: language?.value || initialData.language,
       interests: Array.from(selected),
@@ -107,7 +109,7 @@ export default function EditProfileModal({
     await setDoc(doc(db, "users", currentUser.uid), data, { merge: true });
     await updateProfile(currentUser, { displayName: name, photoURL });
 
-    setData({ name, avatar: photoURL, ...data });
+    setData(data);
     setLoading(false);
     onClose();
   };
