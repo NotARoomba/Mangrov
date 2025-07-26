@@ -34,38 +34,58 @@ export default function Home() {
 
   return (
     <motion.div
-      className="flex justify-center h-screen overflow-hidden"
+      className="flex flex-col md:flex-row justify-center h-screen overflow-hidden"
       variants={containerVariants}
       initial="initial"
       animate="animate"
       exit="exit"
     >
+      {/* Left Text Content */}
       <motion.div
-        className="w-1/2 p-20 flex flex-col justify-between"
+        className="w-full md:w-1/2 px-6 py-12 md:p-20 flex flex-col min-h-screen justify-start md:justify-between text-center md:text-left space-y-8"
         variants={containerVariants}
       >
-        <motion.h1 className="text-8xl font-semibold" variants={itemVariants}>
+        <motion.h1
+          className="text-5xl md:text-7xl xl:text-8xl font-semibold leading-tight"
+          variants={itemVariants}
+        >
           Welcome to Mangrov
         </motion.h1>
+
         <motion.p
-          className="text-5xl leading-14 w-full"
+          className="text-lg sm:text-2xl md:text-3xl xl:text-4xl leading-relaxed text-neutral-300"
           variants={itemVariants}
         >
           A{" "}
           <span className="text-primary font-semibold">
             shopping experience
           </span>{" "}
-          designed by meaningful, <br />
-          raw,{" "}
+          designed by meaningful, raw,{" "}
           <span className="text-primary font-semibold">human experiences</span>.
         </motion.p>
-        <motion.div variants={itemVariants}>
+
+        {/* AuthBox for small screens */}
+        <motion.div
+          className="block md:hidden"
+          variants={itemVariants}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.4, ease: easeOut }}
+        >
+          <AuthBox />
+        </motion.div>
+
+        <motion.div
+          variants={itemVariants}
+          className="self-center md:self-start"
+        >
           <AboutButtons />
         </motion.div>
       </motion.div>
 
+      {/* AuthBox for medium+ screens */}
       <motion.div
-        className="w-1/2 h-full flex items-center justify-center"
+        className="hidden md:flex w-full md:w-1/2 items-center justify-center p-6 md:p-0"
         initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.8, duration: 0.5, ease: easeOut }}
@@ -73,12 +93,14 @@ export default function Home() {
         <AuthBox />
       </motion.div>
 
+      {/* Floating Image Strip */}
       <ImageStrip
         start={{ x: -200, y: (height * 3) / 4 }}
         end={{ x: (width + 400) / 2, y: -300 }}
         speed={12}
-        imgHeightTW="h-44"
-        imgWidthTW="w-56"
+        className="absolute bottom-0 left-0 w-full h-screen pointer-events-none overflow-hidden"
+        imgHeightTW="h-32 sm:h-40 md:h-44"
+        imgWidthTW="w-44 sm:w-52 md:w-56"
       />
     </motion.div>
   );

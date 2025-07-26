@@ -33,7 +33,7 @@ export default function Strip({
   const imgPx = 160; // w-40 ≈ 160 px, 8 px margin (mr-2)
   const tileW = imgPx + 8;
 
-  const imgClasses = `${imgWidthTW} ${imgHeightTW} object-cover select-none shrink-0 opacity-30 rounded-xl mr-2`;
+  const imgClasses = `${imgWidthTW} ${imgHeightTW} object-cover select-none shrink-0 opacity-20 md:opacity-30 rounded-xl mr-2`;
 
   const RowScroller = ({
     direction,

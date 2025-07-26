@@ -2,15 +2,27 @@
 
 /* add 5BB665 as primary and 1e1e1e as secondary */
 
+:root {
+  font-family: Inter, sans-serif;
+  font-feature-settings: 'liga' 1, 'calt' 1; /* fix for Chrome */
+}
+@supports (font-variation-settings: normal) {
+  :root { font-family: InterVariable, sans-serif; }
+}
+
 @theme {
   --color-primary: #5BB665;
   --color-muted: #1e1e1e;
   --font-sans: Inter;
+  --breakpoint-2xs: 22rem;
+  --breakpoint-xs: 30rem;  
+  --breakpoint-2xl: 100rem;  
+  --breakpoint-3xl: 120rem;
 }
-
 html, body, #root {
   scroll-behavior: smooth;
   overflow-y: hidden;
+  overflow-x: hidden;
   background-color: var(--color-neutral-950)
 }
 
