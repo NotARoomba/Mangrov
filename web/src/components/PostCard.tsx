@@ -97,7 +97,7 @@ export default function PostCard({
 
         <img
           src={post.images[0]}
-          alt={post.caption}
+          alt={post.title}
           loading="lazy"
           onLoad={onImageLoad}
           className={`w-full h-auto object-cover rounded-xl transition-all duration-500 ${
@@ -109,7 +109,7 @@ export default function PostCard({
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3 z-20">
           <div className="flex justify-between items-end w-full gap-4">
             <div className="flex flex-col text-white text-left">
-              <div className="text-base font-semibold mb-1">{post.caption}</div>
+              <div className="text-base font-semibold mb-1">{post.title}</div>
               <AnimatePresence>
                 <motion.div
                   layout

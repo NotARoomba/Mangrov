@@ -171,13 +171,13 @@ export default function PostDetailModal({
         {/* RIGHT */}
         <div className="w-1/3 border-l border-neutral-800 flex flex-col justify-between">
           <div className="p-4 border-b border-neutral-800">
-            <h2 className="text-lg font-semibold">{post.caption}</h2>
+            <h2 className="text-lg font-semibold">{post.title}</h2>
             <p className="text-sm text-primary/80">{post.niche}</p>
             {post.description && (
               <p className="text-sm text-white/80 mt-1">{post.description}</p>
             )}
             <p className="text-xs text-neutral-400 mt-2">
-              {post.date?.toDate().toLocaleString()}
+              {post.timestamp?.toDate().toLocaleString()}
             </p>
           </div>
 

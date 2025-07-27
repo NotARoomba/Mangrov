@@ -1,14 +1,21 @@
-import { motion } from "framer-motion";
+import { motion, useAnimation } from "framer-motion";
+import { useEffect } from "react";
 
 export default function GreenSpinner() {
+  const controls = useAnimation();
+
+  useEffect(() => {
+    controls.start({ opacity: 1 });
+  }, [controls]);
+
   return (
     <motion.div
-      className="w-8 h-8 border-6 border-green-500 border-t-transparent rounded-full animate-spin"
+      className="w-8 h-8 border-6 border-primary border-t-transparent rounded-full animate-spin"
       aria-label="Loading"
       role="status"
-      initial={{ rotate: 0, opacity: 0 }}
-      animate={{ rotate: 360, opacity: 1 }}
-      transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+      initial={{ opacity: 0 }}
+      animate={controls}
+      transition={{ duration: 0.4, ease: "easeOut" }}
     />
   );
 }

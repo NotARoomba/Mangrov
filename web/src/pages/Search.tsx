@@ -48,7 +48,7 @@ export default function Search() {
 
   const fetchInitialPosts = async () => {
     const postsRef = collection(db, "posts");
-    const q = query(postsRef, orderBy("date", "desc"), limit(BATCH_SIZE));
+    const q = query(postsRef, orderBy("timestamp", "desc"), limit(BATCH_SIZE));
     const snapshot = await getDocs(q);
     const posts: Post[] = snapshot.docs.map((doc) => ({
       id: doc.id,
@@ -66,7 +66,7 @@ export default function Search() {
     const postsRef = collection(db, "posts");
     const q = query(
       postsRef,
-      orderBy("date", "desc"),
+      orderBy("timestamp", "desc"),
       startAfter(lastVisible),
       limit(BATCH_SIZE)
     );
@@ -95,21 +95,30 @@ export default function Search() {
 
   const fetchSavedPosts = useCallback(async () => {
     if (!user) return;
-    const userDoc = await getDoc(doc(db, "users", user.uid));
-    const savedIds: string[] = userDoc.data()?.savedPosts || [];
 
-    if (!savedIds.length) return;
+    // 1. Get the savedPosts subcollection
+    const savedPostsRef = collection(db, "users", user.uid, "saves");
+    const savedSnapshot = await getDocs(savedPostsRef);
 
+    if (savedSnapshot.empty) return;
+
+    // 2. Extract post IDs (each doc ID is a saved post ID)
+    const savedIds = savedSnapshot.docs.map((doc) => doc.id).slice(0, 10); // Limit to 10 due to Firestore `in` query constraint
+
+    console.log("User saved posts IDs from subcollection:", savedIds);
+
+    // 3. Fetch posts from "posts" collection by ID
     const savedQuery = query(
       collection(db, "posts"),
-      where("__name__", "in", savedIds.slice(0, 10)) // 🔥 Firestore allows max 10 in `in` query
+      where("__name__", "in", savedIds)
     );
 
-    const snapshot = await getDocs(savedQuery);
-    const posts: Post[] = snapshot.docs.map((doc) => ({
+    const postSnapshot = await getDocs(savedQuery);
+    const posts: Post[] = postSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     })) as Post[];
+
     setSavedPosts(posts);
   }, [user]);
 
@@ -121,7 +130,7 @@ export default function Search() {
   useEffect(() => {
     const filtered = allPosts.filter(
       (post) =>
-        post.caption.toLowerCase().includes(debouncedSearchTerm) ||
+        post.title.toLowerCase().includes(debouncedSearchTerm) ||
         post.keywords.some((kw) =>
           kw.toLowerCase().includes(debouncedSearchTerm)
         ) ||

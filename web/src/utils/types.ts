@@ -2,7 +2,7 @@ export type AuthStageType = "email" | "basic" | "interests" | "verify";
 
 export type Post = {
   id: string;
-  caption: string;
+  title: string;
   images: string[];
   description: string;
   keywords: string[];
@@ -11,7 +11,7 @@ export type Post = {
   saves: boolean;
   business: string;
   comments: boolean;
-  date: any;
+  timestamp: any;
   url: string;
   productIds: string[];
 };

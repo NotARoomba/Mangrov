@@ -69,14 +69,16 @@ export default function Profile() {
     if (!user) return;
 
     const fetchData = async () => {
-      // Fetch user data
-      const docRef = doc(db, "users", user.uid);
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
+      try {
+        // 1. Fetch user data
+        const docRef = doc(db, "users", user.uid);
+        const snap = await getDoc(docRef);
+        if (!snap.exists()) return;
+
         const userDoc = snap.data();
         setUserData(userDoc);
 
-        // Fetch user's own posts
+        // 2. Fetch user's own posts
         const postsQuery = query(
           collection(db, "posts"),
           where("uid", "==", user.uid)
@@ -84,26 +86,31 @@ export default function Profile() {
         const postSnap = await getDocs(postsQuery);
         setUserPosts(postSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
 
-        // Fetch saved posts using post IDs from user data
-        const savedPostIds: string[] = userDoc.savedPosts || [];
+        // 3. Fetch saved posts from subcollection
+        const savedSubRef = collection(db, "users", user.uid, "saves");
+        const savedSnap = await getDocs(savedSubRef);
 
-        if (savedPostIds.length > 0) {
-          const postsCollection = collection(db, "posts");
-          const savedPostsQuery = query(
-            postsCollection,
-            where("__name__", "in", savedPostIds.slice(0, 10)) // Firestore limit: 10 per "in" query
-          );
-
-          const savedSnap = await getDocs(savedPostsQuery);
-          const allSavedPosts = savedSnap.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-
-          setSavedPosts(allSavedPosts);
-        } else {
+        if (savedSnap.empty) {
           setSavedPosts([]);
+          return;
         }
+
+        const savedPostIds = savedSnap.docs.map((d) => d.id).slice(0, 10); // limit to 10
+
+        const savedPostsQuery = query(
+          collection(db, "posts"),
+          where("__name__", "in", savedPostIds)
+        );
+
+        const savedPostsSnap = await getDocs(savedPostsQuery);
+        const allSavedPosts = savedPostsSnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        setSavedPosts(allSavedPosts);
+      } catch (err) {
+        console.error("Failed to fetch profile data:", err);
       }
     };
 

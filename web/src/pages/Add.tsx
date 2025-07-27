@@ -10,37 +10,7 @@ import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import ImageStrip from "../components/ImageStrip";
 import useWindowSize from "../hooks/useWindowSize";
-
-const darkSelectStyles: StylesConfig = {
-  control: (base) => ({
-    ...base,
-    background: "#1b1b1b",
-    border: "none",
-    minHeight: "2.6rem",
-    cursor: "pointer",
-  }),
-  singleValue: (b) => ({ ...b, color: "#fff" }),
-  input: (b) => ({ ...b, color: "#fff" }),
-  placeholder: (b) => ({ ...b, color: "#888" }),
-  menu: (b) => ({ ...b, background: "#1b1b1b" }),
-  option: (b, s) => ({
-    ...b,
-    background: s.isFocused ? "#2a2a2a" : "#1b1b1b",
-    color: "#fff",
-    cursor: "pointer",
-  }),
-  indicatorSeparator: () => ({ display: "none" }),
-};
-const DropdownIndicator = (props: any) => (
-  <components.DropdownIndicator {...props}>
-    <ChevronDown size={18} className="text-neutral-400" />
-  </components.DropdownIndicator>
-);
-
-const primaryBtn =
-  "bg-primary text-primary-foreground hover:bg-primary/80 transition duration-200 active:scale-95 uppercase tracking-wide font-bold py-2 rounded-md w-full cursor-pointer disabled:opacity-50";
-const inputClass =
-  "rounded-md bg-muted px-3 py-2 text-sm sm:text-base outline-none focus:ring-2 ring-primary focus:border-primary hover:border-primary transition duration-200 w-full border border-transparent";
+import AddBox from "../components/AddBox";
 
 const wrapperAnim = {
   initial: { opacity: 0, y: 30 },
@@ -51,95 +21,6 @@ const wrapperAnim = {
 export default function AddPage() {
   const [stage, setStage] = useState<"select" | "form">("select");
   const [type, setType] = useState<"post" | "trade" | null>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [images, setImages] = useState<File[]>([]);
-  const [keywords, setKeywords] = useState<string[]>([]);
-  const [keywordInput, setKeywordInput] = useState("");
-  const [price, setPrice] = useState<string | number>("0");
-  const [quantity, setQuantity] = useState<string | number>("1");
-  const [externalLink, setExternalLink] = useState("");
-  const [niche, setNiche] = useState<string | null>(null);
-  const [errors, setErrors] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const isValid = () => {
-    if (!title.trim() || !description.trim()) return false;
-    if (type === "post" && images.length < 1) return false;
-    if (type === "trade" && images.length !== 1) return false;
-    if (type === "post" && (!price || !quantity)) return false;
-    if (!niche) return false;
-    return true;
-  };
-
-  const handleAddKeyword = () => {
-    const kw = keywordInput.trim();
-    if (kw && !keywords.includes(kw)) {
-      setKeywords([...keywords, kw]);
-      setKeywordInput("");
-    }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    const files = Array.from(e.target.files);
-    if (type === "trade") {
-      setImages([files[0]]);
-    } else {
-      setImages([...images, ...files]);
-    }
-  };
-
-  const removeImage = (i: number) =>
-    setImages(images.filter((_, idx) => idx !== i));
-  const removeKeyword = (k: string) =>
-    setKeywords(keywords.filter((kw) => kw !== k));
-
-  const handleSubmit = async () => {
-    if (!isValid()) {
-      setErrors("Please fill in all required fields correctly.");
-      return;
-    }
-    try {
-      setLoading(true);
-      const folder = type === "post" ? "post-images" : "trade-images";
-      const urls: string[] = [];
-      for (const file of images) {
-        const storageRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(storageRef);
-        urls.push(url);
-      }
-
-      const postData: any = {
-        title,
-        description,
-        images: urls,
-        url: externalLink || null,
-        keywords,
-        niche: niche,
-        createdAt: Timestamp.now(),
-      };
-      const docRef = await addDoc(
-        collection(db, type === "post" ? "posts" : "trades"),
-        type === "post"
-          ? {
-              ...postData,
-              price: parseFloat(price as string),
-              quantity: parseInt(quantity as string) || 1,
-            }
-          : postData
-      );
-      console.log("Document written: ", docRef.id);
-      // reset form
-      setStage("select");
-    } catch (err) {
-      console.error(err);
-      setErrors("Upload failed, please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const buffer = 200; // Distance away from screen for dramatic effect
   const randomX = (direction: "left" | "right", type: "start" | "end") => {
@@ -231,8 +112,10 @@ export default function AddPage() {
               </div>
             </motion.div>
           )}
-
-          {stage === "form" && (
+          {stage === "form" && type && (
+            <AddBox type={type} setStage={setStage} />
+          )}
+          {/* {stage === "form" && (
             <motion.div
               key="form"
               {...wrapperAnim}
@@ -270,7 +153,7 @@ export default function AddPage() {
 
               {type === "post" && (
                 <div className="flex flex-col sm:flex-row gap-4">
-                  {/* Price */}
+
                   <div className="flex-1">
                     <label className="text-sm text-neutral-400 block mb-1">
                       Price ($)
@@ -292,7 +175,7 @@ export default function AddPage() {
                     </div>
                   </div>
 
-                  {/* Quantity */}
+
                   <div className="flex-1">
                     <label className="text-sm text-neutral-400 block mb-1">
                       Quantity
@@ -445,13 +328,13 @@ export default function AddPage() {
                 {loading ? "Submitting..." : `Submit ${type}`}
               </button>
             </motion.div>
-          )}
+          )} */}
         </AnimatePresence>
       </PageWrapper>
 
       <ImageStrip
-        start={{ x: 1200, y: 0 }}
-        end={{ x: 0, y: 1200 }}
+        start={stripData.start}
+        end={stripData.end}
         speed={12}
         className="absolute bottom-0 left-0 opacity-25 w-full h-screen pointer-events-none overflow-hidden"
         imgHeightTW="h-32 sm:h-40 md:h-44"
