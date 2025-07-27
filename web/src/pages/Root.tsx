@@ -49,7 +49,7 @@ export default function Root() {
   }, [assetsLoaded, isNavigating]);
 
   return (
-    <div className="max-h-screen font-inter bg-neutral-950 text-white">
+    <div className="max-h-screen font-inter bg-transparent-950 text-white">
       {/* <AnimatePresence>
         {spinnerVisible && location.pathname !== "/" && (
           <GlobalSpinner

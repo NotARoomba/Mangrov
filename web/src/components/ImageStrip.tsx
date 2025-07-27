@@ -1,5 +1,12 @@
-import { useRef, useState } from "react";
-import { motion, useAnimationFrame } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import {
+  animate,
+  motion,
+  useAnimationFrame,
+  useMotionValue,
+  useSpring,
+  useTransform,
+} from "framer-motion";
 
 export interface StripProps {
   start: { x: number; y: number };
@@ -20,19 +27,60 @@ export default function Strip({
 }: StripProps) {
   if (!start || !end) return null;
 
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const length = Math.hypot(dx, dy);
-  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+  const x = useMotionValue(start.x);
+  const y = useMotionValue(start.y);
+  const endX = useMotionValue(end.x);
+  const endY = useMotionValue(end.y);
+
+  // Animate start and end points
+  const springX = useSpring(x, { damping: 40, stiffness: 10 });
+  const springY = useSpring(y, { damping: 40, stiffness: 10 });
+  const springEndX = useSpring(endX, { damping: 40, stiffness: 10 });
+  const springEndY = useSpring(endY, { damping: 40, stiffness: 10 });
+
+  useEffect(() => {
+    x.stop();
+    y.stop();
+    endX.stop();
+    endY.stop();
+
+    x.set(x.get()); // Keep current value to avoid jump
+    y.set(y.get());
+    endX.set(endX.get());
+    endY.set(endY.get());
+
+    requestAnimationFrame(() => {
+      x.set(start.x);
+      y.set(start.y);
+      endX.set(end.x);
+      endY.set(end.y);
+    });
+  }, [start.x, start.y, end.x, end.y]);
+
+  // Calculate derived values
+  const dx = useTransform(
+    [springX, springEndX],
+    ([sx, ex]) => (ex as any) - (sx as any)
+  );
+  const dy = useTransform(
+    [springY, springEndY],
+    ([sy, ey]) => (ey as any) - (sy as any)
+  );
+  const length = useTransform([dx, dy], ([dx, dy]) =>
+    Math.hypot(dx as any, dy as any)
+  );
+  const angle = useTransform(
+    [dx, dy],
+    ([dx, dy]) => Math.atan2(dy as any, dx as any) * (180 / Math.PI)
+  );
 
   const srcs = Array.from({ length: 9 }, (_, i) => `/strip/image${i + 1}.png`);
   const half = Math.ceil(srcs.length / 2);
   const topSet = srcs.slice(0, half);
   const botSet = srcs.slice(half).length ? srcs.slice(half) : topSet;
 
-  const imgPx = 160; // w-40 ≈ 160 px, 8 px margin (mr-2)
+  const imgPx = 160;
   const tileW = imgPx + 8;
-
   const imgClasses = `${imgWidthTW} ${imgHeightTW} object-cover select-none shrink-0 opacity-20 md:opacity-30 rounded-xl mr-2`;
 
   const RowScroller = ({
@@ -43,58 +91,43 @@ export default function Strip({
     images: string[];
   }) => {
     const totalW = images.length * tileW;
-    // start off‑screen depending on direction so the first image slides in smoothly
     const initial = direction === "left" ? 0 : -totalW;
     const [offset, setOffset] = useState(initial);
-    const containerRef = useRef<HTMLDivElement>(null);
-
     useAnimationFrame((_, dt) => {
       setOffset((prev) => {
         const delta = (speed * dt) / 1000;
         let next = direction === "left" ? prev - delta : prev + delta;
-
-        // wrap seamlessly without visible jump
         if (direction === "left" && next <= -totalW) next += totalW;
         if (direction === "right" && next >= 0) next -= totalW;
         return next;
       });
     });
 
-    // render enough tiles to always cover the strip plus overflow on both ends
-    const tilesToRender = Math.ceil(length / tileW) + images.length;
-    const displayed = Array.from(
-      { length: tilesToRender },
-      (_, i) => images[i % images.length]
-    );
-
     return (
       <motion.div
-        initial={{ opacity: 0 }}
+        initial={{ opacity: 1 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        ref={containerRef}
         className="flex whitespace-nowrap"
         style={{ transform: `translateX(${offset}px)` }}
       >
-        {displayed.map((src, i) => (
-          <img key={i} src={src} className={imgClasses} draggable={false} />
-        ))}
+        {Array.from({ length: 18 }, (_, i) => images[i % images.length]).map(
+          (src, i) => (
+            <img key={i} src={src} className={imgClasses} draggable={false} />
+          )
+        )}
       </motion.div>
     );
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 1, ease: "easeInOut" }}
       className={`absolute pointer-events-none overflow-hidden ${className}`}
       style={{
-        top: start.y,
-        left: start.x,
+        top: springY,
+        left: springX,
         width: length,
-        transform: `rotate(${angle}deg)`,
+        rotate: angle,
         transformOrigin: "0 0",
       }}
     >
