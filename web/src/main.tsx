@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Search from "./pages/Search";
 import Add from "./pages/Add";
 import Trade from "./pages/Trade";
+import TradeDetail from "./pages/TradeDetail";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import Cart from "./pages/Cart";
@@ -49,6 +50,10 @@ const router = createBrowserRouter([
       {
         path: "trade",
         Component: Trade,
+      },
+      {
+        path: "trades/:tradeId",
+        Component: TradeDetail,
       },
       {
         path: "messages",

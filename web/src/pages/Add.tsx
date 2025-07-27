@@ -71,7 +71,7 @@ export default function AddPage() {
               {...wrapperAnim}
               className="flex flex-col overflow-hidden overflow-x-hidden overflow-y-hidden md:flex-row items-center justify-center h-screen p-6 gap-6 text-white"
             >
-              {["post", "trade"].map((opt) => {
+              {["trade"].map((opt) => {
                 const Icon = opt === "post" ? PlusCircle : ArrowLeftRight;
 
                 return (
@@ -103,13 +103,6 @@ export default function AddPage() {
                   </button>
                 );
               })}
-
-              <div className="absolute inset-0 pointer-events-none md:hidden">
-                <div className="w-full h-[2px] bg-white/20" />
-              </div>
-              <div className="absolute inset-0 pointer-events-none hidden md:block">
-                <div className="w-[2px] h-full bg-white/20" />
-              </div>
             </motion.div>
           )}
           {stage === "form" && type && (

@@ -11,6 +11,7 @@ import { db } from "../utils/firebase";
 import { useAuth } from "../hooks/useAuth";
 import PageWrapper from "../components/PageWrapper";
 import EditProfileModal from "../components/EditProfileModal";
+import TradeDetailModal from "../components/TradeDetailModal";
 import { Bookmark, Grid3x3, User } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -60,62 +61,118 @@ const fadeUp = {
 export default function Profile() {
   const { user } = useAuth();
   const [userData, setUserData] = useState<any>(null);
-  const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [userTrades, setUserTrades] = useState<any[]>([]);
   const [savedPosts, setSavedPosts] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<"posts" | "saved">("posts");
+  const [showTradeModal, setShowTradeModal] = useState(false);
+  const [selectedTrade, setSelectedTrade] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<"trades" | "saved">("trades");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-
     const fetchData = async () => {
       try {
         // 1. Fetch user data
-        const docRef = doc(db, "users", user.uid);
-        const snap = await getDoc(docRef);
-        if (!snap.exists()) return;
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        setUserData(userDoc.data());
 
-        const userDoc = snap.data();
-        setUserData(userDoc);
-
-        // 2. Fetch user's own posts
-        const postsQuery = query(
-          collection(db, "posts"),
+        // 2. Fetch user's own trades
+        const tradesQuery = query(
+          collection(db, "trades"),
           where("uid", "==", user.uid)
         );
-        const postSnap = await getDocs(postsQuery);
-        setUserPosts(postSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        const tradeSnap = await getDocs(tradesQuery);
+        setUserTrades(tradeSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
 
         // 3. Fetch saved posts from subcollection
-        const savedSubRef = collection(db, "users", user.uid, "saves");
-        const savedSnap = await getDocs(savedSubRef);
-
-        if (savedSnap.empty) {
-          setSavedPosts([]);
-          return;
-        }
-
-        const savedPostIds = savedSnap.docs.map((d) => d.id).slice(0, 10); // limit to 10
-
-        const savedPostsQuery = query(
-          collection(db, "posts"),
-          where("__name__", "in", savedPostIds)
+        const savedQuery = query(
+          collection(db, "users", user.uid, "savedPosts")
         );
-
-        const savedPostsSnap = await getDocs(savedPostsQuery);
-        const allSavedPosts = savedPostsSnap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        setSavedPosts(allSavedPosts);
+        const savedSnap = await getDocs(savedQuery);
+        const savedIds = savedSnap.docs.map((d) => d.id);
+        if (savedIds.length > 0) {
+          const savedPostsQuery = query(
+            collection(db, "posts"),
+            where("__name__", "in", savedIds)
+          );
+          const savedPostsSnap = await getDocs(savedPostsQuery);
+          setSavedPosts(
+            savedPostsSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
+          );
+        }
       } catch (err) {
         console.error("Failed to fetch profile data:", err);
+      } finally {
+        setLoading(false);
       }
     };
-
     fetchData();
   }, [user]);
+
+  const handleTradeClick = (trade: any) => {
+    setSelectedTrade(trade);
+    setShowTradeModal(true);
+  };
+
+  // Handler to update a trade in userTrades after editing
+  const handleTradeUpdate = (updatedTrade: any) => {
+    setUserTrades((prev) =>
+      prev.map((trade) =>
+        trade.id === updatedTrade.id ? { ...trade, ...updatedTrade } : trade
+      )
+    );
+    setSelectedTrade(updatedTrade);
+  };
+
+  if (loading) {
+    return (
+      <PageWrapper className="px-4 py-8 text-white max-w-4xl mx-auto">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-5">
+            <div className="w-24 h-24 rounded-full bg-neutral-700 animate-pulse"></div>
+            <div>
+              <div className="w-48 h-8 bg-neutral-700 rounded mb-2 animate-pulse"></div>
+              <div className="w-32 h-4 bg-neutral-700 rounded animate-pulse"></div>
+            </div>
+          </div>
+          <div className="w-24 h-10 bg-neutral-700 rounded animate-pulse"></div>
+        </div>
+
+        {/* Interests Skeleton */}
+        <div className="mt-6 mb-8">
+          <div className="flex flex-wrap gap-3">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="w-24 h-8 bg-neutral-700 rounded-lg animate-pulse"
+              ></div>
+            ))}
+          </div>
+        </div>
+
+        {/* Tabs Skeleton */}
+        <div className="flex justify-center border-t border-white/10 mb-4">
+          {[1, 2].map((i) => (
+            <div key={i} className="w-1/2 py-3">
+              <div className="w-16 h-4 bg-neutral-700 rounded mx-auto animate-pulse"></div>
+            </div>
+          ))}
+        </div>
+
+        {/* Content Skeleton */}
+        <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className="aspect-square bg-neutral-700 rounded-xl animate-pulse"
+            ></div>
+          ))}
+        </div>
+      </PageWrapper>
+    );
+  }
 
   return (
     <PageWrapper className="px-4 py-8 text-white max-w-4xl mx-auto">
@@ -193,15 +250,15 @@ export default function Profile() {
             className="flex justify-center border-t border-white/10 mb-4"
           >
             <button
-              onClick={() => setActiveTab("posts")}
+              onClick={() => setActiveTab("trades")}
               className={`flex items-center justify-center gap-1 px-6 py-3 text-sm font-medium transition w-1/2 cursor-pointer ${
-                activeTab === "posts"
+                activeTab === "trades"
                   ? "border-t-2 border-white"
                   : "text-white/40"
               }`}
             >
               <Grid3x3 size={18} />
-              Posts
+              Trades
             </button>
             <button
               onClick={() => setActiveTab("saved")}
@@ -224,27 +281,39 @@ export default function Profile() {
             transition={{ delay: 0.4, duration: 0.4 }}
             className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4"
           >
-            {(activeTab === "posts" ? userPosts : savedPosts).map(
-              (post, idx) => (
+            {(activeTab === "trades" ? userTrades : savedPosts).map(
+              (item, idx) => (
                 <motion.div
-                  key={post.id}
+                  key={item.id}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: idx * 0.05 }}
-                  className="relative aspect-square overflow-hidden rounded-xl bg-white/10 cursor-pointer"
+                  className={`relative aspect-square overflow-hidden rounded-xl bg-white/10 cursor-pointer hover:scale-105 transition-transform duration-200 ${
+                    activeTab === "trades"
+                      ? "hover:border-2 hover:border-primary"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    activeTab === "trades" && handleTradeClick(item)
+                  }
                 >
                   <img
-                    src={post.images?.[0]}
-                    alt={post.caption || "Post"}
+                    src={item.images?.[0]}
+                    alt={item.title || item.caption || "Item"}
                     className="object-cover w-full h-full"
                   />
+                  {activeTab === "trades" && !item.isAvailable && (
+                    <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+                      UNAVAILABLE
+                    </div>
+                  )}
                 </motion.div>
               )
             )}
 
-            {activeTab === "posts" && userPosts.length === 0 && (
+            {activeTab === "trades" && userTrades.length === 0 && (
               <p className="text-sm text-white/40 col-span-full text-center">
-                You haven't posted anything yet.
+                You haven't added any trades yet.
               </p>
             )}
             {activeTab === "saved" && savedPosts.length === 0 && (
@@ -261,6 +330,17 @@ export default function Profile() {
             initialData={userData}
             setData={(data) => setUserData(data)}
             onClose={() => setShowModal(false)}
+          />
+        )}
+        {showTradeModal && (
+          <TradeDetailModal
+            trade={selectedTrade}
+            isOpen={showTradeModal}
+            onClose={() => {
+              setShowTradeModal(false);
+              setSelectedTrade(null);
+            }}
+            onTradeUpdate={handleTradeUpdate}
           />
         )}
       </AnimatePresence>

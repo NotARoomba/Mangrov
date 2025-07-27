@@ -9,6 +9,8 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useState } from "react";
 import { storage, db } from "../utils/firebase";
 import GreenSpinner from "./GreenSpinner";
+import GlobalSpinner from "./GlobalSpinner";
+import { useAuth } from "../hooks/useAuth";
 
 const darkSelectStyles: StylesConfig = {
   control: (base) => ({
@@ -46,6 +48,7 @@ const wrapperAnim = {
   exit: { opacity: 0, y: -20 },
 };
 export default function AddBox({ type, setStage }: any) {
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [images, setImages] = useState<File[]>([]);
@@ -53,18 +56,22 @@ export default function AddBox({ type, setStage }: any) {
   const [keywordInput, setKeywordInput] = useState("");
   const [price, setPrice] = useState<string | number>("0");
   const [quantity, setQuantity] = useState<string | number>("1");
+  const [tradeQuantity, setTradeQuantity] = useState<string | number>("1");
   const [externalLink, setExternalLink] = useState("");
   const [niche, setNiche] = useState<{ label: string; value: string } | null>(
     null
   );
   const [errors, setErrors] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [createdTradeId, setCreatedTradeId] = useState<string | null>(null);
 
   const isValid = () => {
     if (!title.trim() || !description.trim()) return false;
     if (type === "post" && images.length < 1) return false;
     if (type === "trade" && images.length !== 1) return false;
     if (type === "post" && (!price || !quantity)) return false;
+    if (type === "trade" && !tradeQuantity) return false;
     if (!niche) return false;
     return true;
   };
@@ -97,6 +104,10 @@ export default function AddBox({ type, setStage }: any) {
       setErrors("Please fill in all required fields correctly.");
       return;
     }
+    if (!user) {
+      setErrors("You must be logged in to create content.");
+      return;
+    }
     try {
       setLoading(true);
       const folder = type === "post" ? "post-images" : "trade-images";
@@ -115,6 +126,7 @@ export default function AddBox({ type, setStage }: any) {
         keywords,
         niche: [niche?.label],
         timestamp: Timestamp.now(),
+        uid: user.uid, // Add user ID to all content
       };
       const docRef = await addDoc(
         collection(db, type === "post" ? "posts" : "trades"),
@@ -125,11 +137,20 @@ export default function AddBox({ type, setStage }: any) {
               quantity: parseInt(quantity as string) || 1,
               url: externalLink || null,
             }
-          : postData
+          : {
+              ...postData,
+              quantity: parseInt(tradeQuantity as string) || 1,
+              isAvailable: true,
+            }
       );
       console.log("Document written: ", docRef.id);
-      // reset form
-      setStage("select");
+
+      if (type === "trade") {
+        setCreatedTradeId(docRef.id);
+        setSuccess(true);
+      } else {
+        setStage("select");
+      }
     } catch (err) {
       console.error(err);
       setErrors("Upload failed, please try again.");
@@ -137,6 +158,68 @@ export default function AddBox({ type, setStage }: any) {
       setLoading(false);
     }
   };
+
+  if (success && createdTradeId) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="max-w-md mx-auto py-20 px-8 text-white text-center"
+      >
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="mb-8"
+        >
+          <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-8 h-8 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold mb-2">
+            Trade Created Successfully!
+          </h2>
+          <p className="text-neutral-400">
+            Your trade is now live and ready for discovery.
+          </p>
+        </motion.div>
+
+        <div className="space-y-4">
+          <motion.button
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            onClick={() => (window.location.href = `/trades/${createdTradeId}`)}
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/80 cursor-pointer transition-all duration-200 active:scale-95 uppercase tracking-wide font-bold py-3 rounded-md"
+          >
+            View Trade
+          </motion.button>
+
+          <motion.button
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            onClick={() => setStage("select")}
+            className="w-full bg-neutral-800 text-white hover:bg-neutral-700 cursor-pointer transition-all duration-200 active:scale-95 uppercase tracking-wide font-bold py-3 rounded-md"
+          >
+            Create Another
+          </motion.button>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       key="form"
@@ -181,7 +264,6 @@ export default function AddBox({ type, setStage }: any) {
             </label>
             <div className="flex items-center rounded-md border border-neutral-700 bg-neutral-900">
               <input
-                // type="number"
                 inputMode="decimal"
                 min="0"
                 step="0.01"
@@ -233,6 +315,49 @@ export default function AddBox({ type, setStage }: any) {
                 +
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {type === "trade" && (
+        <div className="flex-1">
+          <label className="text-sm text-neutral-400 block mb-1">
+            Quantity Available
+          </label>
+          <div className="flex items-center rounded-md border border-neutral-700 bg-neutral-900">
+            <button
+              type="button"
+              onClick={() =>
+                setTradeQuantity((prev) =>
+                  Math.max(1, parseInt((prev as string) || "1") - 1)
+                )
+              }
+              className="px-3 py-2 text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors duration-150 cursor-pointer"
+            >
+              -
+            </button>
+            <input
+              inputMode="numeric"
+              min="1"
+              value={tradeQuantity}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val) && val >= 1) setTradeQuantity(val);
+                else if (e.target.value === "") setTradeQuantity("");
+              }}
+              className="w-full bg-transparent text-white text-sm px-2 py-2 outline-none no-spinner"
+            />
+            <button
+              type="button"
+              onClick={() =>
+                setTradeQuantity(
+                  (prev) => parseInt((prev as string) || "1") + 1
+                )
+              }
+              className="px-3 py-2 text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors duration-150 cursor-pointer"
+            >
+              +
+            </button>
           </div>
         </div>
       )}
@@ -342,7 +467,7 @@ export default function AddBox({ type, setStage }: any) {
 
       {loading ? (
         <div className="flex items-center justify-center">
-          <GreenSpinner />
+          <GlobalSpinner />
         </div>
       ) : (
         <button
