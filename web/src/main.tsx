@@ -14,6 +14,7 @@ import TradeDetail from "./pages/TradeDetail";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import Cart from "./pages/Cart";
+import Error from "./pages/Error";
 import { CartProvider } from "./hooks/useCart";
 import { AuthProvider } from "./hooks/useAuth";
 
@@ -27,14 +28,6 @@ const router = createBrowserRouter([
         Component: Home,
       },
       { path: "about", Component: About },
-      // {
-      //   path: "dashboard",
-      //   children: [
-      //     { index: true, Component: ConcertsHome },
-      //     { path: ":city", Component: ConcertsCity },
-      //     { path: "trending", Component: ConcertsTrending },
-      //   ],
-      // },
       {
         path: "dashboard",
         Component: Dashboard,
@@ -60,6 +53,10 @@ const router = createBrowserRouter([
         Component: Messages,
       },
       {
+        path: "messages/:userId",
+        Component: Messages,
+      },
+      {
         path: "cart",
         Component: Cart,
       },
@@ -68,6 +65,7 @@ const router = createBrowserRouter([
         Component: Profile,
       },
     ],
+    errorElement: <Error />,
   },
 ]);
 

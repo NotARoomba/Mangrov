@@ -8,6 +8,7 @@ import {
   getDoc,
   addDoc,
   updateDoc,
+  setDoc,
 } from "firebase/firestore";
 import { db } from "../utils/firebase";
 import { useAuth } from "../hooks/useAuth";
@@ -22,6 +23,9 @@ import {
   ArrowLeft,
   ArrowRight,
   Filter,
+  ChevronUp,
+  ChevronDown,
+  RotateCcw,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 
@@ -63,6 +67,9 @@ export default function Trade() {
   const [matches, setMatches] = useState<TradeMatch[]>([]);
   const [activeTab, setActiveTab] = useState<"swipe" | "matches">("swipe");
   const [loading, setLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [passedTrades, setPassedTrades] = useState<Set<string>>(new Set());
+  const [showResetOption, setShowResetOption] = useState(false);
 
   // Fetch user's interests
   useEffect(() => {
@@ -93,33 +100,101 @@ export default function Trade() {
     fetchUserTrades();
   }, [user]);
 
-  // Fetch matches
+  // Fetch matches - only show mutual matches
   useEffect(() => {
     if (!user) return;
     const fetchMatches = async () => {
-      const q = query(
+      // Query for matches where current user is the fromUser
+      const fromUserQuery = query(
         collection(db, "tradeMatches"),
         where("fromUser", "==", user.uid)
       );
-      const snap = await getDocs(q);
-      const result = snap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as TradeMatch[];
-      setMatches(result);
+
+      // Query for matches where current user is the toUser
+      const toUserQuery = query(
+        collection(db, "tradeMatches"),
+        where("toUser", "==", user.uid)
+      );
+
+      const [fromUserSnap, toUserSnap] = await Promise.all([
+        getDocs(fromUserQuery),
+        getDocs(toUserQuery),
+      ]);
+
+      // Combine both results
+      const allMatches = [
+        ...fromUserSnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })),
+        ...toUserSnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })),
+      ] as TradeMatch[];
+
+      // Only show matches where both parties have liked (mutual matches)
+      const mutualMatches = allMatches.filter(
+        (match) => match.fromLiked && match.toLiked
+      );
+
+      setMatches(mutualMatches);
     };
     fetchMatches();
+  }, [user]);
+
+  // Fetch user's passed trades
+  useEffect(() => {
+    if (!user) return;
+    const fetchPassedTrades = async () => {
+      try {
+        const passedRef = collection(db, "users", user.uid, "passes");
+        const passedSnap = await getDocs(passedRef);
+        const passedIds = new Set(passedSnap.docs.map((doc) => doc.id));
+        setPassedTrades(passedIds);
+      } catch (error) {
+        console.error("Error fetching passed trades:", error);
+      }
+    };
+    fetchPassedTrades();
   }, [user]);
 
   // Memoized fetch posts function to prevent rerenders
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     let result: Post[] = [];
+
+    // Get all existing trade matches for the user
+    let existingMatches: TradeMatch[] = [];
+    if (user) {
+      const matchesQuery = query(
+        collection(db, "tradeMatches"),
+        where("fromUser", "==", user.uid)
+      );
+      const matchesSnap = await getDocs(matchesQuery);
+      existingMatches = matchesSnap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as TradeMatch[];
+    }
+
+    // Create a set of trade IDs that already have pending matches
+    const pendingTradeIds = new Set(
+      existingMatches.map((match) => match.toItem)
+    );
+
     if (randomMode) {
-      // Fetch all trades except user's own
+      // Fetch all trades except user's own, passed ones, and pending matches
       const snap = await getDocs(collection(db, "trades"));
       result = snap.docs
-        .filter((doc) => doc.data().uid !== user?.uid) // Filter out user's own trades
+        .filter((doc) => {
+          const data = doc.data();
+          return (
+            data.uid !== user?.uid &&
+            !passedTrades.has(doc.id) &&
+            !pendingTradeIds.has(doc.id)
+          );
+        })
         .map((doc) => ({
           id: doc.id,
           ...doc.data(),
@@ -140,18 +215,27 @@ export default function Trade() {
         (snap) =>
           snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Post[]
       );
-      // Remove duplicates and user's own posts
+      // Remove duplicates, user's own posts, passed trades, and pending matches
       const seen = new Set();
       result = result.filter((post) => {
-        if (seen.has(post.id) || post.uid === user?.uid) return false;
+        if (
+          seen.has(post.id) ||
+          post.uid === user?.uid ||
+          passedTrades.has(post.id) ||
+          pendingTradeIds.has(post.id)
+        )
+          return false;
         seen.add(post.id);
         return true;
       });
     }
     setPosts(result);
     setCurrentIndex(0);
+    setShowResetOption(
+      result.length === 0 && (passedTrades.size > 0 || pendingTradeIds.size > 0)
+    );
     setLoading(false);
-  }, [selectedNiches, randomMode, user]);
+  }, [selectedNiches, randomMode, user, passedTrades]);
 
   // Memoized filter handlers to prevent rerenders
   const handleRandomModeChange = useCallback((checked: boolean) => {
@@ -170,12 +254,28 @@ export default function Trade() {
     []
   );
 
-  // Fetch posts when dependencies change
+  // Fetch posts when dependencies change - removed fetchPosts from dependency array
   useEffect(() => {
     fetchPosts();
-  }, [fetchPosts]);
+  }, [selectedNiches, randomMode, user, passedTrades]);
 
-  const swipeLeft = () => {
+  const swipeLeft = async () => {
+    // Pass logic - add to passed trades subcollection
+    const currentPost = posts[currentIndex];
+    if (currentPost && user) {
+      try {
+        // Add to user's passed trades subcollection
+        await setDoc(doc(db, "users", user.uid, "passes", currentPost.id), {
+          tradeId: currentPost.id,
+          timestamp: new Date(),
+        });
+
+        // Update local state
+        setPassedTrades((prev) => new Set([...prev, currentPost.id]));
+      } catch (error) {
+        console.error("Error adding to passed trades:", error);
+      }
+    }
     setCurrentIndex((prev) => Math.min(prev + 1, posts.length - 1));
   };
 
@@ -183,28 +283,55 @@ export default function Trade() {
     // Like logic - check if there's a match
     const currentPost = posts[currentIndex];
     if (currentPost && user) {
-      // Check if the other user has already liked one of our items
-      const existingMatch = matches.find(
-        (match) =>
-          match.toUser === currentPost.uid && match.toItem === currentPost.id
-      );
+      try {
+        // Check for existing matches in both directions
+        // 1. Check if we already have a match where we are the fromUser
+        const ourExistingMatchQuery = query(
+          collection(db, "tradeMatches"),
+          where("fromUser", "==", user.uid),
+          where("toUser", "==", currentPost.uid),
+          where("toItem", "==", currentPost.id)
+        );
 
-      if (existingMatch) {
-        // Update existing match
-        await updateDoc(doc(db, "tradeMatches", existingMatch.id), {
-          fromLiked: true,
-        });
-      } else {
-        // Create new match record
-        await addDoc(collection(db, "tradeMatches"), {
-          fromUser: user.uid,
-          toUser: currentPost.uid,
-          fromItem: "", // Will be set when user selects their item
-          toItem: currentPost.id,
-          fromLiked: true,
-          toLiked: false,
-          timestamp: new Date(),
-        });
+        // 2. Check if the other user has already created a match where they are the fromUser
+        const theirExistingMatchQuery = query(
+          collection(db, "tradeMatches"),
+          where("fromUser", "==", currentPost.uid),
+          where("toUser", "==", user.uid),
+          where("toItem", "==", currentPost.id)
+        );
+
+        const [ourMatchSnap, theirMatchSnap] = await Promise.all([
+          getDocs(ourExistingMatchQuery),
+          getDocs(theirExistingMatchQuery),
+        ]);
+
+        if (!ourMatchSnap.empty) {
+          // We already have a match record, update it
+          const existingMatchDoc = ourMatchSnap.docs[0];
+          await updateDoc(doc(db, "tradeMatches", existingMatchDoc.id), {
+            fromLiked: true,
+          });
+        } else if (!theirMatchSnap.empty) {
+          // The other user has already created a match, update it
+          const existingMatchDoc = theirMatchSnap.docs[0];
+          await updateDoc(doc(db, "tradeMatches", existingMatchDoc.id), {
+            toLiked: true,
+          });
+        } else {
+          // No existing match, create a new one
+          await addDoc(collection(db, "tradeMatches"), {
+            fromUser: user.uid,
+            toUser: currentPost.uid,
+            fromItem: "", // Will be set when user selects their item
+            toItem: currentPost.id,
+            fromLiked: true,
+            toLiked: false,
+            timestamp: new Date(),
+          });
+        }
+      } catch (error) {
+        console.error("Error handling swipe right:", error);
       }
     }
     setCurrentIndex((prev) => Math.min(prev + 1, posts.length - 1));
@@ -232,33 +359,72 @@ export default function Trade() {
   const handleItemSelect = async (selectedItem: Post) => {
     if (!currentTradePost || !user) return;
 
-    // Create or update match record
-    const existingMatch = matches.find(
-      (match) =>
-        match.toUser === currentTradePost.uid &&
-        match.toItem === currentTradePost.id
-    );
+    try {
+      // Check if the other user has already liked our selected item
+      // This would be a match where:
+      // - fromUser = currentPost.uid (the person who posted the item we're viewing)
+      // - toUser = user.uid (current user)
+      // - toItem = selectedItem.id (our item that they liked)
+      const existingMatchQuery = query(
+        collection(db, "tradeMatches"),
+        where("fromUser", "==", currentTradePost.uid),
+        where("toUser", "==", user.uid),
+        where("toItem", "==", selectedItem.id)
+      );
 
-    if (existingMatch) {
-      await updateDoc(doc(db, "tradeMatches", existingMatch.id), {
-        fromItem: selectedItem.id,
-        fromLiked: true,
-      });
-    } else {
-      await addDoc(collection(db, "tradeMatches"), {
-        fromUser: user.uid,
-        toUser: currentTradePost.uid,
-        fromItem: selectedItem.id,
-        toItem: currentTradePost.id,
-        fromLiked: true,
-        toLiked: false,
-        timestamp: new Date(),
-      });
+      const existingMatchSnap = await getDocs(existingMatchQuery);
+
+      if (!existingMatchSnap.empty) {
+        // The other user has already liked our selected item!
+        // Update the existing match to include our like of their item
+        const existingMatch = existingMatchSnap.docs[0];
+        await updateDoc(doc(db, "tradeMatches", existingMatch.id), {
+          fromItem: selectedItem.id, // Add our selected item
+          toLiked: true, // Mark that we liked their item
+        });
+      } else {
+        // No existing match, create a new one
+        await addDoc(collection(db, "tradeMatches"), {
+          fromUser: user.uid,
+          toUser: currentTradePost.uid,
+          fromItem: selectedItem.id,
+          toItem: currentTradePost.id,
+          fromLiked: true,
+          toLiked: false,
+          timestamp: new Date(),
+        });
+      }
+    } catch (error) {
+      console.error("Error handling item selection:", error);
     }
 
     setShowProductPicker(false);
     setCurrentTradePost(null);
     swipeLeft();
+  };
+
+  const handleResetPassedTrades = async () => {
+    if (!user) return;
+
+    try {
+      // Clear all passed trades from subcollection
+      const passedRef = collection(db, "users", user.uid, "passes");
+      const passedSnap = await getDocs(passedRef);
+
+      const deletePromises = passedSnap.docs.map((doc) =>
+        setDoc(doc.ref, {}, { merge: false })
+      );
+      await Promise.all(deletePromises);
+
+      // Clear local state
+      setPassedTrades(new Set());
+      setShowResetOption(false);
+
+      // Refetch posts
+      fetchPosts();
+    } catch (error) {
+      console.error("Error resetting passed trades:", error);
+    }
   };
 
   const swipeHandlers = useSwipeable({
@@ -272,7 +438,7 @@ export default function Trade() {
   // Memoized swipe area to prevent rerenders
   const swipeArea = useMemo(
     () => (
-      <div className="relative w-full max-w-md h-[500px] flex items-center justify-center select-none">
+      <div className="relative w-full max-w-2xl flex items-center justify-center select-none">
         {/* Card stack */}
         {posts.slice(currentIndex, currentIndex + 2).map((post, idx) => {
           const isTop = idx === 0;
@@ -284,7 +450,7 @@ export default function Trade() {
                 <motion.div
                   {...swipeHandlers}
                   key={post.id}
-                  className="absolute w-full h-full flex flex-col items-center justify-center cursor-pointer"
+                  className=" max-w-lg w-full flex flex-col items-center justify-center cursor-pointer"
                   style={{ zIndex: 2 }}
                   initial={{
                     x: swipeDirection === "left" ? 0 : 0,
@@ -307,39 +473,41 @@ export default function Trade() {
                   }}
                   transition={{ duration: 0.35 }}
                 >
-                  <div className="w-full h-full bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl p-4 flex flex-col items-center text-center border-2 border-neutral-800">
+                  <div className="relative w-full rounded-3xl shadow-2xl overflow-hidden">
                     <img
                       src={post.images?.[0]}
                       alt={post.title}
-                      className="w-full h-64 object-cover rounded-xl mb-4 border border-neutral-700"
+                      className="w-full h-auto object-cover"
                     />
-                    <h2 className="text-2xl font-bold mb-2 text-neutral-900 dark:text-white">
-                      {post.title}
-                    </h2>
-                    <p className="text-base mt-2 text-neutral-500 dark:text-neutral-300">
-                      {post.description}
-                    </p>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+                    <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                      <h2 className="text-xl font-bold mb-2">{post.title}</h2>
+                      <p className="text-sm text-neutral-200 leading-relaxed">
+                        {post.description}
+                      </p>
+                    </div>
                   </div>
                 </motion.div>
               ) : (
                 <motion.div
                   key={post.id}
-                  className="absolute w-full h-full flex flex-col items-center justify-center"
+                  className="absolute w-full flex flex-col items-center justify-center"
                   style={{ zIndex: 1, top: offset, scale, opacity: 0.7 }}
                   initial={{ scale: 0.96, opacity: 0.7 }}
                   animate={{ scale, opacity: 0.7 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <div className="w-full h-full bg-white dark:bg-neutral-900 rounded-2xl shadow-xl p-4 flex flex-col items-center text-center border border-neutral-800">
+                  <div className="relative w-full rounded-3xl shadow-xl overflow-hidden">
                     <img
                       src={post.images?.[0]}
                       alt={post.title}
-                      className="w-full h-64 object-cover rounded-xl mb-4 border border-neutral-700"
+                      className="w-full h-auto object-cover"
                     />
-                    <h2 className="text-xl font-bold mb-2 text-neutral-900 dark:text-white">
-                      {post.title}
-                    </h2>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+                    <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                      <h2 className="text-lg font-bold">{post.title}</h2>
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -347,13 +515,81 @@ export default function Trade() {
           );
         })}
         {posts.length === 0 && (
-          <div className="absolute w-full h-full flex items-center justify-center text-neutral-400 text-lg">
-            No posts found for this niche.
+          <div className="w-full flex flex-col items-center justify-center text-center px-6 py-16">
+            <div className="mb-8 w-full max-w-lg">
+              <div className="w-24 h-24 bg-gradient-to-br from-neutral-800 to-neutral-700 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                {showResetOption ? (
+                  <RotateCcw size={48} className="text-neutral-400" />
+                ) : (
+                  <Filter size={48} className="text-neutral-400" />
+                )}
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-3">
+                {showResetOption
+                  ? "No More Trades to View"
+                  : selectedNiches.length === 0 && !randomMode
+                  ? "No Trades Found"
+                  : "No Trades Available"}
+              </h3>
+              <p className="text-lg text-neutral-400 leading-relaxed">
+                {showResetOption ? (
+                  <>
+                    You've seen all available trades.{" "}
+                    <span className="text-primary font-semibold">Reset</span> to
+                    view passed trades again or try different{" "}
+                    <span className="text-primary font-semibold">filters</span>.
+                  </>
+                ) : selectedNiches.length === 0 && !randomMode ? (
+                  <>
+                    There are no trades found for your{" "}
+                    <span className="text-primary font-semibold">
+                      interests
+                    </span>
+                    . Try enabling{" "}
+                    <span className="text-primary font-semibold">
+                      Random Mode
+                    </span>{" "}
+                    or select some interests to discover more trades!
+                  </>
+                ) : (
+                  <>
+                    No trades match your current{" "}
+                    <span className="text-primary font-semibold">filters</span>.
+                    Try adjusting your{" "}
+                    <span className="text-primary font-semibold">
+                      preferences
+                    </span>{" "}
+                    or enabling Random Mode.
+                  </>
+                )}
+              </p>
+
+              {showResetOption && (
+                <div className="mt-6">
+                  <button
+                    onClick={handleResetPassedTrades}
+                    className="px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-lg hover:from-primary/90 hover:to-primary/70 transition-all duration-200 flex items-center gap-2 mx-auto cursor-pointer shadow-lg"
+                  >
+                    <RotateCcw size={20} />
+                    Reset Passed Trades
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
     ),
-    [posts, currentIndex, swipeDirection, isAnimating, swipeHandlers]
+    [
+      posts,
+      currentIndex,
+      swipeDirection,
+      isAnimating,
+      swipeHandlers,
+      selectedNiches,
+      randomMode,
+      showResetOption,
+    ]
   );
 
   const primaryBtn =
@@ -374,12 +610,6 @@ export default function Trade() {
           </div>
         </div>
 
-        {/* Filter Skeleton */}
-        <div className="w-full max-w-md space-y-4">
-          <div className="w-full h-4 bg-neutral-700 rounded animate-pulse"></div>
-          <div className="w-full h-10 bg-neutral-700 rounded animate-pulse"></div>
-        </div>
-
         {/* Card Skeleton */}
         <div className="relative w-full max-w-md h-[500px] flex items-center justify-center">
           <div className="w-full h-full bg-neutral-900 rounded-2xl shadow-2xl p-4 flex flex-col items-center text-center border-2 border-neutral-800">
@@ -394,8 +624,8 @@ export default function Trade() {
 
         {/* Buttons Skeleton */}
         <div className="flex space-x-8 mt-2 w-full max-w-xs">
-          <div className="w-1/2 h-10 bg-neutral-700 rounded-md animate-pulse"></div>
-          <div className="w-1/2 h-10 bg-neutral-700 rounded-md animate-pulse"></div>
+          <div className="w-1/2 h-12 bg-neutral-700 rounded-md animate-pulse"></div>
+          <div className="w-1/2 h-12 bg-neutral-700 rounded-md animate-pulse"></div>
         </div>
       </PageWrapper>
     );
@@ -445,10 +675,10 @@ export default function Trade() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.3 }}
-              className="flex justify-center"
+              className="flex flex-col items-center"
             >
               {/* Main Swipe Area - Centered */}
-              <div className="flex flex-col items-center justify-center space-y-6">
+              <div className="flex flex-col items-center justify-center space-y-6 w-full">
                 {swipeArea}
 
                 {/* Progress indicator */}
@@ -464,74 +694,39 @@ export default function Trade() {
                   <button
                     onClick={() => handleSwipe("left")}
                     disabled={isAnimating || currentIndex >= posts.length}
-                    className={`w-1/2 rounded-md py-2 ${primaryBtn}`}
+                    className={`w-1/2 rounded-md py-4 ${primaryBtn}`}
                   >
-                    <X className="w-5 h-5 mx-auto" />
-                    Pass
+                    <Heart className="w-6 h-6 mx-auto" />
+                    Like
                   </button>
                   <button
                     onClick={() => handleSwipe("right")}
                     disabled={isAnimating || currentIndex >= posts.length}
-                    className={`w-1/2 rounded-md py-2 ${primaryBtn}`}
+                    className={`w-1/2 rounded-md py-4 ${primaryBtn}`}
                   >
-                    <Heart className="w-5 h-5 mx-auto" />
-                    Like
+                    <X className="w-6 h-6 mx-auto" />
+                    Pass
                   </button>
                 </div>
-              </div>
 
-              {/* Filters Sidebar - Absolute positioned */}
-              <div className="fixed right-8 top-1/2 transform -translate-y-1/2 w-80">
-                <div className="bg-neutral-900 rounded-xl p-6 border border-neutral-800 shadow-2xl">
-                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                {/* Filter Toggle Button - Relative to content */}
+                <div className="mt-8">
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-full shadow-lg transition-all duration-300 cursor-pointer ${
+                      showFilters
+                        ? "bg-primary text-white"
+                        : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+                    }`}
+                  >
                     <Filter size={20} />
                     Filters
-                  </h3>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={randomMode}
-                          onChange={(e) =>
-                            handleRandomModeChange(e.target.checked)
-                          }
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                      </label>
-                      <span className="text-white text-sm">
-                        Random Mode (show all)
-                      </span>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-white mb-2">
-                        Filter by Interests
-                      </label>
-                      <select
-                        className={`w-full ${mutedInput} cursor-pointer`}
-                        value={selectedNiches}
-                        onChange={handleNicheChange}
-                        multiple
-                        disabled={randomMode}
-                        size={Math.min(userInterests.length, 6) || 2}
-                      >
-                        {userInterests.map((interest) => (
-                          <option key={interest} value={interest}>
-                            {INTERESTS.find((i) => i.id === interest)?.label ||
-                              interest}
-                          </option>
-                        ))}
-                      </select>
-                      {!randomMode && userInterests.length > 1 && (
-                        <div className="text-xs text-neutral-400 mt-1">
-                          Hold Ctrl (Cmd on Mac) to select multiple interests
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    {showFilters ? (
+                      <ChevronDown size={16} />
+                    ) : (
+                      <ChevronUp size={16} />
+                    )}
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -573,11 +768,22 @@ export default function Trade() {
                           <MessageCircle className="w-5 h-5" />
                         </button>
                       </div>
-                      <p className="text-white text-sm">
-                        {match.fromLiked && match.toLiked
-                          ? "Mutual match!"
-                          : "Pending match"}
-                      </p>
+                      <div className="space-y-2">
+                        <p className="text-white text-sm">
+                          <span className="text-primary font-semibold">
+                            @{match.toUser}
+                          </span>{" "}
+                          accepted your trade for{" "}
+                          <span className="text-primary font-semibold">
+                            {match.toItem}
+                          </span>
+                        </p>
+                        <p className="text-neutral-400 text-xs">
+                          {match.fromLiked && match.toLiked
+                            ? "Mutual match!"
+                            : "Pending response"}
+                        </p>
+                      </div>
                     </motion.div>
                   ))
                 )}
@@ -586,6 +792,81 @@ export default function Trade() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Filters Slide-up Panel - Outside AnimatePresence to prevent re-rendering */}
+      <AnimatePresence>
+        {showFilters && activeTab === "swipe" && (
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed bottom-0 left-0 right-0 z-10 bg-neutral-900 border-t border-neutral-800 shadow-2xl"
+          >
+            <div className="max-w-6xl mx-auto px-4 py-6">
+              <div className="bg-neutral-800 rounded-xl p-6 border border-neutral-700">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Filter size={20} />
+                    Filters
+                  </h3>
+                  <button
+                    onClick={() => setShowFilters(false)}
+                    className="text-neutral-400 hover:text-white transition cursor-pointer"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={randomMode}
+                        onChange={(e) =>
+                          handleRandomModeChange(e.target.checked)
+                        }
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                    <span className="text-white text-sm">
+                      Random Mode (show all)
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Filter by Interests
+                    </label>
+                    <select
+                      className={`w-full ${mutedInput} cursor-pointer`}
+                      value={selectedNiches}
+                      onChange={handleNicheChange}
+                      multiple
+                      disabled={randomMode}
+                      size={Math.min(userInterests.length, 6) || 2}
+                    >
+                      {userInterests.map((interest) => (
+                        <option key={interest} value={interest}>
+                          {INTERESTS.find((i) => i.id === interest)?.label ||
+                            interest}
+                        </option>
+                      ))}
+                    </select>
+                    {!randomMode && userInterests.length > 1 && (
+                      <div className="text-xs text-neutral-400 mt-1">
+                        Hold Ctrl (Cmd on Mac) to select multiple interests
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Product Picker Modal */}
       <AnimatePresence>
@@ -644,7 +925,7 @@ export default function Trade() {
                   <p>You need to add some trades first!</p>
                   <motion.button
                     onClick={() => navigate("/add")}
-                    className={`mt-4 px-6 py-2 rounded-md text-sm bg-primary text-primary-foreground hover:bg-primary/80 cursor-pointer transition-all duration-200 active:scale-95 uppercase tracking-wide font-bold`}
+                    className={`mt-4 px-6 py-2 rounded-md text-sm bg-primary text-white hover:bg-primary/80 cursor-pointer transition-all duration-200 active:scale-95 uppercase tracking-wide font-bold`}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
