@@ -47,6 +47,10 @@ interface TradeMatch {
   fromLiked: boolean;
   toLiked: boolean;
   timestamp: any;
+  fromUserName?: string;
+  toUserName?: string;
+  fromItemTitle?: string;
+  toItemTitle?: string;
 }
 
 export default function Trade() {
@@ -138,7 +142,61 @@ export default function Trade() {
         (match) => match.fromLiked && match.toLiked
       );
 
-      setMatches(mutualMatches);
+      // Fetch user names and trade titles for each match
+      const enrichedMatches = await Promise.all(
+        mutualMatches.map(async (match) => {
+          let fromUserName = "";
+          let toUserName = "";
+          let fromItemTitle = "";
+          let toItemTitle = "";
+
+          try {
+            // Get user names
+            const [fromUserDoc, toUserDoc] = await Promise.all([
+              getDoc(doc(db, "users", match.fromUser)),
+              getDoc(doc(db, "users", match.toUser)),
+            ]);
+
+            if (fromUserDoc.exists()) {
+              fromUserName =
+                fromUserDoc.data()?.displayName ||
+                fromUserDoc.data()?.username ||
+                "Unknown User";
+            }
+            if (toUserDoc.exists()) {
+              toUserName =
+                toUserDoc.data()?.displayName ||
+                toUserDoc.data()?.username ||
+                "Unknown User";
+            }
+
+            // Get trade titles
+            const [fromItemDoc, toItemDoc] = await Promise.all([
+              getDoc(doc(db, "trades", match.fromItem)),
+              getDoc(doc(db, "trades", match.toItem)),
+            ]);
+
+            if (fromItemDoc.exists()) {
+              fromItemTitle = fromItemDoc.data()?.title || "Unknown Item";
+            }
+            if (toItemDoc.exists()) {
+              toItemTitle = toItemDoc.data()?.title || "Unknown Item";
+            }
+          } catch (error) {
+            console.error("Error fetching match details:", error);
+          }
+
+          return {
+            ...match,
+            fromUserName,
+            toUserName,
+            fromItemTitle,
+            toItemTitle,
+          };
+        })
+      );
+
+      setMatches(enrichedMatches);
     };
     fetchMatches();
   }, [user]);
@@ -751,41 +809,74 @@ export default function Trade() {
                     </p>
                   </div>
                 ) : (
-                  matches.map((match) => (
-                    <motion.div
-                      key={match.id}
-                      className="bg-neutral-900 rounded-xl p-6 border border-neutral-700 cursor-pointer hover:border-primary transition-colors"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-sm text-neutral-400">Match</span>
-                        <button
-                          onClick={() => navigate(`/messages/${match.toUser}`)}
-                          className="text-primary hover:text-primary/80 transition cursor-pointer"
-                        >
-                          <MessageCircle className="w-5 h-5" />
-                        </button>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-white text-sm">
-                          <span className="text-primary font-semibold">
-                            @{match.toUser}
-                          </span>{" "}
-                          accepted your trade for{" "}
-                          <span className="text-primary font-semibold">
-                            {match.toItem}
+                  matches.map((match) => {
+                    // Determine which user is the other user (not current user)
+                    const isCurrentUserFrom = match.fromUser === user?.uid;
+                    const otherUserId = isCurrentUserFrom
+                      ? match.toUser
+                      : match.fromUser;
+                    const otherUserName = isCurrentUserFrom
+                      ? match.toUserName
+                      : match.fromUserName;
+                    const currentUserItemTitle = isCurrentUserFrom
+                      ? match.fromItemTitle
+                      : match.toItemTitle;
+                    const otherUserItemTitle = isCurrentUserFrom
+                      ? match.toItemTitle
+                      : match.fromItemTitle;
+
+                    return (
+                      <motion.div
+                        key={match.id}
+                        onClick={() => navigate(`/messages/${otherUserId}`)}
+                        className="bg-neutral-900 rounded-xl p-6 border border-neutral-700 cursor-pointer hover:border-primary transition-colors"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-sm text-neutral-400">
+                            Match
                           </span>
-                        </p>
-                        <p className="text-neutral-400 text-xs">
-                          {match.fromLiked && match.toLiked
-                            ? "Mutual match!"
-                            : "Pending response"}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ))
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/messages/${otherUserId}`);
+                            }}
+                            className="text-primary hover:text-primary/80 transition cursor-pointer p-2 rounded-lg hover:bg-primary/10"
+                          >
+                            <MessageCircle className="w-6 h-6" />
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-white text-sm">
+                            <span
+                              className="text-primary font-semibold cursor-pointer hover:underline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/user/${otherUserId}`);
+                              }}
+                            >
+                              {otherUserName}
+                            </span>{" "}
+                            wants to trade{" "}
+                            <span className="text-primary font-semibold">
+                              "{otherUserItemTitle}"
+                            </span>{" "}
+                            for your{" "}
+                            <span className="text-primary font-semibold">
+                              "{currentUserItemTitle}"
+                            </span>
+                          </p>
+                          <p className="text-neutral-400 text-xs">
+                            {match.fromLiked && match.toLiked
+                              ? "Mutual match!"
+                              : "Pending response"}
+                          </p>
+                        </div>
+                      </motion.div>
+                    );
+                  })
                 )}
               </div>
             </motion.div>

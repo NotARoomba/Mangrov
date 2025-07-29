@@ -14,4 +14,16 @@ export type Post = {
   timestamp: any;
   url: string;
   productIds: string[];
+  uid?: string;
+  isAvailable?: boolean;
+};
+
+export type User = {
+  uid: string;
+  username: string;
+  displayName: string;
+  avatar?: string;
+  interests?: string[];
+  bio?: string;
+  email?: string;
 };

@@ -15,7 +15,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "../utils/firebase";
 import { useAuth } from "../hooks/useAuth";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import PageWrapper from "../components/PageWrapper";
 import {
   Send,
@@ -27,6 +27,7 @@ import {
   Search,
   ArrowLeft,
 } from "lucide-react";
+import type { User } from "../utils/types";
 
 interface Message {
   id: string;
@@ -47,13 +48,6 @@ interface Chat {
   otherUser?: User;
 }
 
-interface User {
-  uid: string;
-  username: string;
-  displayName: string;
-  avatar?: string;
-}
-
 export default function Messages() {
   const { user } = useAuth();
   const { userId } = useParams();
@@ -66,6 +60,7 @@ export default function Messages() {
   const [searchQuery, setSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -273,10 +268,7 @@ export default function Messages() {
           {/* Header */}
           <div className="p-4 border-b border-neutral-800">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-xl font-bold text-white">Messages</h1>
-              <button className="text-neutral-400 hover:text-white">
-                <MoreVertical size={20} />
-              </button>
+              <h1 className="text-3xl font-bold text-primary">Messages</h1>
             </div>
 
             {/* Search */}
@@ -303,9 +295,15 @@ export default function Messages() {
                   <Search size={32} />
                 </div>
                 <p>No messages yet</p>
-                <p className="text-sm">
+                <p className="text-sm mb-4">
                   Start a conversation to see messages here
                 </p>
+                <button
+                  onClick={() => navigate("/trade")}
+                  className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/80 transition-colors"
+                >
+                  Trade with someone to start messaging
+                </button>
               </div>
             ) : (
               filteredChats.map((chat) => (
@@ -383,52 +381,68 @@ export default function Messages() {
                     <button className="text-neutral-400 hover:text-white p-2">
                       <Phone size={20} />
                     </button>
-                    <button className="text-neutral-400 hover:text-white p-2">
-                      <Info size={20} />
-                    </button>
                   </div>
                 </div>
               </div>
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((message) => (
-                  <motion.div
-                    key={message.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex ${
-                      message.senderId === user?.uid
-                        ? "justify-end"
-                        : "justify-start"
-                    }`}
-                  >
-                    <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                {messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-neutral-400">
+                    <div className="w-16 h-16 bg-neutral-800 rounded-full flex items-center justify-center mb-4">
+                      <Search size={32} />
+                    </div>
+                    <p>No messages yet</p>
+                    <p className="text-sm mb-4">
+                      Start a conversation with{" "}
+                      {otherUser?.displayName || "this user"}
+                    </p>
+                    <button
+                      onClick={() => navigate("/trade")}
+                      className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/80 transition-colors"
+                    >
+                      Trade with someone to start messaging
+                    </button>
+                  </div>
+                ) : (
+                  messages.map((message) => (
+                    <motion.div
+                      key={message.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`flex ${
                         message.senderId === user?.uid
-                          ? "bg-primary text-white"
-                          : "bg-neutral-800 text-white"
+                          ? "justify-end"
+                          : "justify-start"
                       }`}
                     >
-                      {message.imageUrl && (
-                        <img
-                          src={message.imageUrl}
-                          alt="Message"
-                          className="w-full h-48 object-cover rounded-lg mb-2"
-                        />
-                      )}
-                      {message.text && (
-                        <p className="break-words">{message.text}</p>
-                      )}
-                      <p className="text-xs opacity-70 mt-1">
-                        {message.timestamp?.toDate().toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
+                      <div
+                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                          message.senderId === user?.uid
+                            ? "bg-primary text-white"
+                            : "bg-neutral-800 text-white"
+                        }`}
+                      >
+                        {message.imageUrl && (
+                          <img
+                            src={message.imageUrl}
+                            alt="Message"
+                            className="w-full h-48 object-cover rounded-lg mb-2"
+                          />
+                        )}
+                        {message.text && (
+                          <p className="break-words">{message.text}</p>
+                        )}
+                        <p className="text-xs opacity-70 mt-1">
+                          {message.timestamp?.toDate().toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -483,8 +497,11 @@ export default function Messages() {
               <p className="text-neutral-400 mb-6">
                 Send a message to start a chat
               </p>
-              <button className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/80 transition-colors">
-                Send message
+              <button
+                onClick={() => navigate("/trade")}
+                className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/80 transition-colors"
+              >
+                Trade with someone to start messaging
               </button>
             </div>
           )}

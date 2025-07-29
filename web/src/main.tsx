@@ -13,6 +13,7 @@ import Trade from "./pages/Trade";
 import TradeDetail from "./pages/TradeDetail";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
+import UserProfile from "./pages/UserProfile";
 import Cart from "./pages/Cart";
 import Error from "./pages/Error";
 import { CartProvider } from "./hooks/useCart";
@@ -63,6 +64,10 @@ const router = createBrowserRouter([
       {
         path: "profile",
         Component: Profile,
+      },
+      {
+        path: "user/:userId",
+        Component: UserProfile,
       },
     ],
     errorElement: <Error />,
