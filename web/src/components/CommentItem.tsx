@@ -1,7 +1,8 @@
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { doc, getDoc, Timestamp } from "firebase/firestore";
 import { db } from "../utils/firebase";
 import { motion } from "framer-motion";
+import { Reply, Send } from "lucide-react";
 import dayjs from "dayjs";
 
 type CommentType = {
@@ -21,6 +22,7 @@ type Props = {
   replyText: string;
   onReplyChange: (text: string) => void;
   onReplySubmit: (id: string, userId: string) => void;
+  isSubmitting?: boolean;
 };
 
 export default function CommentItem({
@@ -31,22 +33,29 @@ export default function CommentItem({
   replyText,
   onReplyChange,
   onReplySubmit,
+  isSubmitting = false,
 }: Props) {
   const [userData, setUserData] = useState<{
-    avatar: string;
+    avatar?: string;
     name: string;
   } | null>(null);
-
   const [replyToName, setReplyToName] = useState<string | null>(null);
   const [isHighlighted, setIsHighlighted] = useState(false);
-
   const [formattedTime, setFormattedTime] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchUser = async () => {
-      const userSnap = await getDoc(doc(db, "users", comment.user));
-      if (userSnap.exists()) {
-        setUserData(userSnap.data() as { avatar: string; name: string });
+      try {
+        setIsLoading(true);
+        const userSnap = await getDoc(doc(db, "users", comment.user));
+        if (userSnap.exists()) {
+          setUserData(userSnap.data() as { avatar?: string; name: string });
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchUser();
@@ -55,12 +64,16 @@ export default function CommentItem({
   useEffect(() => {
     const fetchReplyToName = async () => {
       if (comment.replyToUserId) {
-        const replyUserSnap = await getDoc(
-          doc(db, "users", comment.replyToUserId)
-        );
-        if (replyUserSnap.exists()) {
-          const data = replyUserSnap.data() as { name: string };
-          setReplyToName(data.name);
+        try {
+          const replyUserSnap = await getDoc(
+            doc(db, "users", comment.replyToUserId)
+          );
+          if (replyUserSnap.exists()) {
+            const data = replyUserSnap.data() as { name: string };
+            setReplyToName(data.name);
+          }
+        } catch (error) {
+          console.error("Error fetching reply user data:", error);
         }
       }
     };
@@ -75,16 +88,41 @@ export default function CommentItem({
   }, [comment.timestamp]);
 
   const handleMouseEnter = () => {
-    const target = document.querySelector(`[data-id='${comment.replyToId}']`);
-    if (target) target.classList.add("bg-primary/20");
-    setIsHighlighted(true);
+    if (comment.replyToId) {
+      const target = document.querySelector(`[data-id='${comment.replyToId}']`);
+      if (target) target.classList.add("bg-primary/20");
+      setIsHighlighted(true);
+    }
   };
 
   const handleMouseLeave = () => {
-    const target = document.querySelector(`[data-id='${comment.replyToId}']`);
-    if (target) target.classList.remove("bg-primary/20");
-    setIsHighlighted(false);
+    if (comment.replyToId) {
+      const target = document.querySelector(`[data-id='${comment.replyToId}']`);
+      if (target) target.classList.remove("bg-primary/20");
+      setIsHighlighted(false);
+    }
   };
+
+  const handleReplyKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      onReplySubmit(comment.id, comment.user);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="animate-pulse">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-neutral-700 rounded-full"></div>
+          <div className="flex-1 space-y-2">
+            <div className="h-4 bg-neutral-700 rounded w-24"></div>
+            <div className="h-3 bg-neutral-700 rounded w-full"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -95,56 +133,95 @@ export default function CommentItem({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 10 }}
       transition={{ duration: 0.2 }}
-      className={`group relative rounded-md p-2 transition-all duration-200 my-3 ${
-        comment.replyToId ? "ml-6 border-l-4 border-primary/30 pl-4" : ""
-      } ${isHighlighted ? "bg-primary/20" : "bg-neutral-800/50"}`}
+      className={`group relative rounded-lg p-3 transition-all duration-200 ${
+        comment.replyToId
+          ? "ml-6 border-l-2 border-primary/30 pl-4 bg-neutral-800/30"
+          : "bg-neutral-800/20"
+      } ${isHighlighted ? "bg-primary/20" : ""}`}
     >
       <div className="flex items-start gap-3">
-        <img
-          src={userData?.avatar}
-          alt="avatar"
-          className="w-7 h-7 rounded-full object-cover"
-        />
-        <div className="flex flex-col w-full">
-          <div className="text-white text-sm leading-tight">
-            <span className="font-semibold text-primary">{userData?.name}</span>{" "}
+        {/* User Avatar */}
+        <div className="flex-shrink-0">
+          {userData?.avatar ? (
+            <img
+              src={userData.avatar}
+              alt={`${userData.name}'s avatar`}
+              className="w-8 h-8 rounded-full object-cover border border-white/10"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = "none";
+                target.nextElementSibling?.classList.remove("hidden");
+              }}
+            />
+          ) : null}
+          <div
+            className={`w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-sm font-semibold ${
+              userData?.avatar ? "hidden" : ""
+            }`}
+          >
+            {userData?.name?.charAt(0)?.toUpperCase() || "U"}
+          </div>
+        </div>
+
+        {/* Comment Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-semibold text-primary text-sm">
+              {userData?.name || "Unknown User"}
+            </span>
             {replyToName && (
-              <span className="text-xs text-neutral-400 ml-1">
+              <span className="text-xs text-neutral-400">
                 replying to @{replyToName}
               </span>
             )}
+            <span className="text-xs text-neutral-500 ml-auto">
+              {formattedTime}
+            </span>
           </div>
-          <div className="text-neutral-200 text-sm mt-1 wrap-anywhere">
+
+          <div className="text-white/90 text-sm leading-relaxed break-words">
             {comment.text}
+          </div>
+
+          {/* Reply Button */}
+          <div className="flex items-center mt-2">
+            <button
+              onClick={() => onReplyClick(comment.id)}
+              disabled={isSubmitting}
+              className="flex items-center gap-1 text-xs text-neutral-400 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Reply size={12} />
+              Reply
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between mt-2 ml-10 text-xs text-neutral-400">
-        <button
-          onClick={() => onReplyClick(comment.id)}
-          className="hover:underline cursor-pointer"
-        >
-          Reply
-        </button>
-        <span>{formattedTime}</span>
-      </div>
-
+      {/* Reply Input */}
       {isReplying && (
-        <div className="mt-2 flex items-center gap-2 ">
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          className="mt-3 flex items-center gap-2 bg-neutral-800/50 rounded-lg p-3"
+        >
           <input
             value={replyText}
             onChange={(e) => onReplyChange(e.target.value)}
-            placeholder={`Reply to ${userData?.name || "user"}`}
-            className="flex-1 bg-neutral-800 text-white px-3 py-1 rounded-md text-xs"
+            onKeyPress={handleReplyKeyPress}
+            placeholder={`Reply to ${userData?.name || "user"}...`}
+            disabled={isSubmitting}
+            className="flex-1 bg-transparent text-white placeholder-white/60 text-sm outline-none"
           />
-          <button
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={() => onReplySubmit(comment.id, comment.user)}
-            className="text-xs text-neutral-300 hover:underline cursor-pointer"
+            disabled={!replyText.trim() || isSubmitting}
+            className="text-primary hover:text-primary/80 disabled:text-white/40 disabled:cursor-not-allowed transition-colors"
           >
-            Send
-          </button>
-        </div>
+            <Send size={14} />
+          </motion.button>
+        </motion.div>
       )}
     </motion.div>
   );

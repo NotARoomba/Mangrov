@@ -1,57 +1,18 @@
 import { useEffect, useState } from "react";
-import {
-  getDoc,
-  doc,
-  query,
-  collection,
-  where,
-  getDocs,
-} from "firebase/firestore";
-import { db } from "../utils/firebase";
 import { useAuth } from "../hooks/useAuth";
+import { useSearchParams } from "react-router";
 import PageWrapper from "../components/PageWrapper";
 import EditProfileModal from "../components/EditProfileModal";
 import TradeDetailModal from "../components/TradeDetailModal";
+import PostDetailModal from "../components/PostDetailModal";
 import { Bookmark, Grid3x3, User } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-
-const getFlagEmoji = (countryCode: string) => {
-  if (!countryCode) return "";
-  return countryCode
-    .toUpperCase()
-    .replace(/./g, (char) => String.fromCodePoint(127397 + char.charCodeAt(0)));
-};
-
-const getEarthToneColor = (seed: string) => {
-  const earthyHexColors = [
-    "bg-[#4B3B2A]",
-    "bg-[#6F4E37]",
-    "bg-[#A68A64]",
-    "bg-[#8C6E54]",
-    "bg-[#7C5C45]",
-    "bg-[#D1BFA3]",
-    "bg-[#A89F91]",
-    "bg-[#C2B280]",
-    "bg-[#5E503F]",
-    "bg-[#3B3228]",
-    "bg-[#556B2F]",
-    "bg-[#4B5320]",
-    "bg-[#2E4E3F]",
-    "bg-[#3C5A4C]",
-    "bg-[#6A6051]",
-    "bg-[#746C57]",
-    "bg-[#91876E]",
-    "bg-[#5C544E]",
-  ];
-
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  const index = Math.abs(hash) % earthyHexColors.length;
-  return earthyHexColors[index];
-};
+import { getFlagEmoji, getEarthToneColor } from "../utils/helpers";
+import {
+  fetchUserData,
+  fetchUserTrades,
+  fetchSavedPosts,
+} from "../utils/firebaseHelpers";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -60,59 +21,61 @@ const fadeUp = {
 
 export default function Profile() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [userData, setUserData] = useState<any>(null);
   const [userTrades, setUserTrades] = useState<any[]>([]);
   const [savedPosts, setSavedPosts] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [showTradeModal, setShowTradeModal] = useState(false);
+  const [showPostModal, setShowPostModal] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState<any>(null);
+  const [selectedPost, setSelectedPost] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"trades" | "saved">("trades");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    const fetchData = async () => {
+
+    const loadProfileData = async () => {
       try {
-        // 1. Fetch user data
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        setUserData(userDoc.data());
+        const [userDataResult, tradesResult, savedPostsResult] =
+          await Promise.all([
+            fetchUserData(user.uid),
+            fetchUserTrades(user.uid),
+            fetchSavedPosts(user.uid),
+          ]);
 
-        // 2. Fetch user's own trades
-        const tradesQuery = query(
-          collection(db, "trades"),
-          where("uid", "==", user.uid)
-        );
-        const tradeSnap = await getDocs(tradesQuery);
-        setUserTrades(tradeSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-
-        // 3. Fetch saved posts from subcollection
-        const savedQuery = query(
-          collection(db, "users", user.uid, "savedPosts")
-        );
-        const savedSnap = await getDocs(savedQuery);
-        const savedIds = savedSnap.docs.map((d) => d.id);
-        if (savedIds.length > 0) {
-          const savedPostsQuery = query(
-            collection(db, "posts"),
-            where("__name__", "in", savedIds)
-          );
-          const savedPostsSnap = await getDocs(savedPostsQuery);
-          setSavedPosts(
-            savedPostsSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
-          );
-        }
+        setUserData(userDataResult);
+        setUserTrades(tradesResult);
+        setSavedPosts(savedPostsResult);
       } catch (err) {
         console.error("Failed to fetch profile data:", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+
+    loadProfileData();
   }, [user]);
+
+  // Handle tab from URL parameter
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "saved") {
+      setActiveTab("saved");
+    } else {
+      setActiveTab("trades");
+    }
+  }, [searchParams]);
 
   const handleTradeClick = (trade: any) => {
     setSelectedTrade(trade);
     setShowTradeModal(true);
+  };
+
+  const handlePostClick = (post: any) => {
+    setSelectedPost(post);
+    setShowPostModal(true);
   };
 
   // Handler to update a trade in userTrades after editing
@@ -201,7 +164,11 @@ export default function Profile() {
               <div>
                 <h1 className="text-3xl font-bold text-white">
                   {userData.name}
-                  <span> - {getFlagEmoji(userData.country || "")}</span>
+                  <span>
+                    {" "}
+                    - {"    "}
+                    {getFlagEmoji(userData.country || "")}
+                  </span>
                 </h1>
                 <p className="text-sm text-white/60">{user.email}</p>
               </div>
@@ -294,7 +261,9 @@ export default function Profile() {
                       : ""
                   }`}
                   onClick={() =>
-                    activeTab === "trades" && handleTradeClick(item)
+                    activeTab === "trades"
+                      ? handleTradeClick(item)
+                      : handlePostClick(item)
                   }
                 >
                   <img
@@ -341,6 +310,20 @@ export default function Profile() {
               setSelectedTrade(null);
             }}
             onTradeUpdate={handleTradeUpdate}
+          />
+        )}
+        {showPostModal && selectedPost && (
+          <PostDetailModal
+            post={selectedPost}
+            onClose={() => {
+              setShowPostModal(false);
+              setSelectedPost(null);
+            }}
+            user={user}
+            liked={false}
+            saved={true}
+            handleLike={() => {}}
+            handleSave={() => {}}
           />
         )}
       </AnimatePresence>

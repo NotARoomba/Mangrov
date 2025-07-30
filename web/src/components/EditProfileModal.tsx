@@ -16,6 +16,8 @@ import countryList from "react-select-country-list";
 import Select, { components, type StylesConfig } from "react-select";
 import { LANGUAGES, INTERESTS } from "../utils/constants";
 import GreenSpinner from "./GreenSpinner";
+import { isValidUsername } from "../utils/helpers";
+import { checkUsernameExists } from "../utils/firebaseHelpers";
 
 const primaryBtn =
   "bg-primary text-primary-foreground hover:bg-primary/80 cursor-pointer transition-all duration-200 active:scale-95 uppercase tracking-widest font-bold disabled:opacity-40 disabled:cursor-not-allowed rounded-md";
@@ -61,7 +63,8 @@ export default function EditProfileModal({
   onClose,
 }: {
   initialData: {
-    name?: string;
+    displayName?: string;
+    username?: string;
     country?: any;
     language?: any;
     interests?: string[];
@@ -70,7 +73,10 @@ export default function EditProfileModal({
   setData: (data: any) => void;
   onClose: () => void;
 }) {
-  const [name, setName] = useState(initialData?.name || "");
+  const [displayName, setDisplayName] = useState(
+    initialData?.displayName || ""
+  );
+  const [username, setUsername] = useState(initialData?.username || "");
   const [country, setCountry] = useState(initialData?.country || null);
   const [language, setLanguage] = useState(initialData?.language || null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -82,12 +88,28 @@ export default function EditProfileModal({
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!name.trim()) return setErrors("Name is required");
+    if (!displayName.trim()) return setErrors("Name is required");
+    if (!username.trim()) return setErrors("Username is required");
+    if (username.trim().length < 3)
+      return setErrors("Username must be at least 3 characters");
+    if (!isValidUsername(username))
+      return setErrors(
+        "Username can only contain letters, numbers, and underscores"
+      );
+
     setLoading(true);
 
     const auth = getAuth();
     const currentUser = auth.currentUser;
     if (!currentUser) return setErrors("You must be logged in.");
+
+    // Check if username already exists (excluding current user)
+    const usernameExists = await checkUsernameExists(username, currentUser.uid);
+    if (usernameExists) {
+      setErrors("Username already exists. Please choose a different one.");
+      setLoading(false);
+      return;
+    }
 
     let photoURL = avatar;
 
@@ -99,7 +121,8 @@ export default function EditProfileModal({
     }
 
     const data = {
-      name,
+      displayName,
+      username,
       avatar: photoURL,
       country: country?.value || initialData.country,
       language: language?.value || initialData.language,
@@ -107,7 +130,7 @@ export default function EditProfileModal({
     };
 
     await setDoc(doc(db, "users", currentUser.uid), data, { merge: true });
-    await updateProfile(currentUser, { displayName: name, photoURL });
+    await updateProfile(currentUser, { displayName, photoURL });
 
     setData(data);
     setLoading(false);
@@ -172,13 +195,42 @@ export default function EditProfileModal({
           </label>
           <input
             className={`${mutedInput} w-full`}
-            value={name}
+            value={displayName}
             onChange={(e) => {
-              setName(e.target.value);
+              setDisplayName(e.target.value);
               setErrors(null);
             }}
             placeholder="Your name"
           />
+        </div>
+
+        <div className="mb-5">
+          <label className="block text-sm mb-1">Username</label>
+          <input
+            className={`${mutedInput} w-full ${
+              username && !isValidUsername(username)
+                ? "border-red-500 focus:border-red-500"
+                : username && isValidUsername(username)
+                ? "border-green-500 focus:border-green-500"
+                : ""
+            }`}
+            value={username}
+            onChange={(e) => {
+              setUsername(e.target.value);
+              setErrors(null);
+            }}
+            placeholder="johndoe123"
+          />
+          {username && !isValidUsername(username) && (
+            <p className="text-red-500 text-xs mt-1">
+              Username can only contain letters, numbers, and underscores
+            </p>
+          )}
+          {!username && (
+            <p className="text-neutral-400 text-xs mt-1">
+              Only letters, numbers, and underscores allowed
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">

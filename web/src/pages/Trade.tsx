@@ -71,6 +71,8 @@ export default function Trade() {
   const [matches, setMatches] = useState<TradeMatch[]>([]);
   const [activeTab, setActiveTab] = useState<"swipe" | "matches">("swipe");
   const [loading, setLoading] = useState(true);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [matchesLoading, setMatchesLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [passedTrades, setPassedTrades] = useState<Set<string>>(new Set());
   const [showResetOption, setShowResetOption] = useState(false);
@@ -85,6 +87,7 @@ export default function Trade() {
         setUserInterests(data.interests);
         setSelectedNiches(data.interests);
       }
+      setLoading(false);
     };
     fetchUserInterests();
   }, [user]);
@@ -107,6 +110,7 @@ export default function Trade() {
   // Fetch matches - only show mutual matches
   useEffect(() => {
     if (!user) return;
+    setMatchesLoading(true);
     const fetchMatches = async () => {
       // Query for matches where current user is the fromUser
       const fromUserQuery = query(
@@ -142,6 +146,8 @@ export default function Trade() {
         (match) => match.fromLiked && match.toLiked
       );
 
+      console.log("Total matches found:", mutualMatches.length); // Debug log
+
       // Fetch user names and trade titles for each match
       const enrichedMatches = await Promise.all(
         mutualMatches.map(async (match) => {
@@ -151,6 +157,8 @@ export default function Trade() {
           let toItemTitle = "";
 
           try {
+            console.log("Processing match:", match); // Debug log
+
             // Get user names
             const [fromUserDoc, toUserDoc] = await Promise.all([
               getDoc(doc(db, "users", match.fromUser)),
@@ -158,32 +166,70 @@ export default function Trade() {
             ]);
 
             if (fromUserDoc.exists()) {
+              const fromUserData = fromUserDoc.data();
               fromUserName =
-                fromUserDoc.data()?.displayName ||
-                fromUserDoc.data()?.username ||
-                "Unknown User";
+                fromUserData?.name || fromUserData?.username || "Unknown User";
+              console.log("From user data:", fromUserData); // Debug log
             }
             if (toUserDoc.exists()) {
+              const toUserData = toUserDoc.data();
               toUserName =
-                toUserDoc.data()?.displayName ||
-                toUserDoc.data()?.username ||
-                "Unknown User";
+                toUserData?.name || toUserData?.username || "Unknown User";
+              console.log("To user data:", toUserData); // Debug log
             }
 
-            // Get trade titles
-            const [fromItemDoc, toItemDoc] = await Promise.all([
-              getDoc(doc(db, "trades", match.fromItem)),
-              getDoc(doc(db, "trades", match.toItem)),
-            ]);
+            // Get trade titles - handle cases where fromItem might be empty
+            const fetchPromises = [];
 
-            if (fromItemDoc.exists()) {
-              fromItemTitle = fromItemDoc.data()?.title || "Unknown Item";
+            if (match.fromItem && match.fromItem.trim() !== "") {
+              console.log("Fetching fromItem:", match.fromItem); // Debug log
+              fetchPromises.push(getDoc(doc(db, "trades", match.fromItem)));
+            } else {
+              console.log("fromItem is empty or null"); // Debug log
+              fetchPromises.push(Promise.resolve(null));
             }
-            if (toItemDoc.exists()) {
-              toItemTitle = toItemDoc.data()?.title || "Unknown Item";
+
+            if (match.toItem && match.toItem.trim() !== "") {
+              console.log("Fetching toItem:", match.toItem); // Debug log
+              fetchPromises.push(getDoc(doc(db, "trades", match.toItem)));
+            } else {
+              console.log("toItem is empty or null"); // Debug log
+              fetchPromises.push(Promise.resolve(null));
             }
+
+            const [fromItemDoc, toItemDoc] = await Promise.all(fetchPromises);
+
+            if (fromItemDoc && fromItemDoc.exists()) {
+              const fromItemData = fromItemDoc.data();
+              fromItemTitle = fromItemData?.title || "Unknown Item";
+              console.log("From item data:", fromItemData); // Debug log
+            } else {
+              fromItemTitle = "Item not selected yet";
+              console.log("From item not found or empty"); // Debug log
+            }
+
+            if (toItemDoc && toItemDoc.exists()) {
+              const toItemData = toItemDoc.data();
+              toItemTitle = toItemData?.title || "Unknown Item";
+              console.log("To item data:", toItemData); // Debug log
+            } else {
+              toItemTitle = "Unknown Item";
+              console.log("To item not found or empty"); // Debug log
+            }
+
+            console.log("Final enriched match:", {
+              fromUserName,
+              toUserName,
+              fromItemTitle,
+              toItemTitle,
+            }); // Debug log
           } catch (error) {
             console.error("Error fetching match details:", error);
+            // Set fallback values
+            fromUserName = "Unknown User";
+            toUserName = "Unknown User";
+            fromItemTitle = "Unknown Item";
+            toItemTitle = "Unknown Item";
           }
 
           return {
@@ -196,7 +242,9 @@ export default function Trade() {
         })
       );
 
+      console.log("Final enriched matches:", enrichedMatches); // Debug log
       setMatches(enrichedMatches);
+      setMatchesLoading(false);
     };
     fetchMatches();
   }, [user]);
@@ -219,7 +267,7 @@ export default function Trade() {
 
   // Memoized fetch posts function to prevent rerenders
   const fetchPosts = useCallback(async () => {
-    setLoading(true);
+    setPostsLoading(true);
     let result: Post[] = [];
 
     // Get all existing trade matches for the user
@@ -292,7 +340,7 @@ export default function Trade() {
     setShowResetOption(
       result.length === 0 && (passedTrades.size > 0 || pendingTradeIds.size > 0)
     );
-    setLoading(false);
+    setPostsLoading(false);
   }, [selectedNiches, randomMode, user, passedTrades]);
 
   // Memoized filter handlers to prevent rerenders
@@ -572,69 +620,87 @@ export default function Trade() {
             </AnimatePresence>
           );
         })}
-        {posts.length === 0 && (
+        {postsLoading ? (
+          // Posts Loading Skeleton
           <div className="w-full flex flex-col items-center justify-center text-center px-6 py-16">
             <div className="mb-8 w-full max-w-lg">
-              <div className="w-24 h-24 bg-gradient-to-br from-neutral-800 to-neutral-700 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                {showResetOption ? (
-                  <RotateCcw size={48} className="text-neutral-400" />
-                ) : (
-                  <Filter size={48} className="text-neutral-400" />
-                )}
+              <div className="w-24 h-24 bg-gradient-to-br from-neutral-800 to-neutral-700 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg animate-pulse">
+                <Filter size={48} className="text-neutral-400" />
               </div>
-              <h3 className="text-2xl font-bold text-white mb-3">
-                {showResetOption
-                  ? "No More Trades to View"
-                  : selectedNiches.length === 0 && !randomMode
-                  ? "No Trades Found"
-                  : "No Trades Available"}
-              </h3>
-              <p className="text-lg text-neutral-400 leading-relaxed">
-                {showResetOption ? (
-                  <>
-                    You've seen all available trades.{" "}
-                    <span className="text-primary font-semibold">Reset</span> to
-                    view passed trades again or try different{" "}
-                    <span className="text-primary font-semibold">filters</span>.
-                  </>
-                ) : selectedNiches.length === 0 && !randomMode ? (
-                  <>
-                    There are no trades found for your{" "}
-                    <span className="text-primary font-semibold">
-                      interests
-                    </span>
-                    . Try enabling{" "}
-                    <span className="text-primary font-semibold">
-                      Random Mode
-                    </span>{" "}
-                    or select some interests to discover more trades!
-                  </>
-                ) : (
-                  <>
-                    No trades match your current{" "}
-                    <span className="text-primary font-semibold">filters</span>.
-                    Try adjusting your{" "}
-                    <span className="text-primary font-semibold">
-                      preferences
-                    </span>{" "}
-                    or enabling Random Mode.
-                  </>
-                )}
-              </p>
-
-              {showResetOption && (
-                <div className="mt-6">
-                  <button
-                    onClick={handleResetPassedTrades}
-                    className="px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-lg hover:from-primary/90 hover:to-primary/70 transition-all duration-200 flex items-center gap-2 mx-auto cursor-pointer shadow-lg"
-                  >
-                    <RotateCcw size={20} />
-                    Reset Passed Trades
-                  </button>
-                </div>
-              )}
+              <div className="w-64 h-8 bg-neutral-800 rounded mb-4 animate-pulse mx-auto"></div>
+              <div className="w-96 h-4 bg-neutral-800 rounded animate-pulse mx-auto"></div>
             </div>
           </div>
+        ) : (
+          posts.length === 0 && (
+            <div className="w-full flex flex-col items-center justify-center text-center px-6 py-16">
+              <div className="mb-8 w-full max-w-lg">
+                <div className="w-24 h-24 bg-gradient-to-br from-neutral-800 to-neutral-700 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  {showResetOption ? (
+                    <RotateCcw size={48} className="text-neutral-400" />
+                  ) : (
+                    <Filter size={48} className="text-neutral-400" />
+                  )}
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">
+                  {showResetOption
+                    ? "No More Trades to View"
+                    : selectedNiches.length === 0 && !randomMode
+                    ? "No Trades Found"
+                    : "No Trades Available"}
+                </h3>
+                <p className="text-lg text-neutral-400 leading-relaxed">
+                  {showResetOption ? (
+                    <>
+                      You've seen all available trades.{" "}
+                      <span className="text-primary font-semibold">Reset</span>{" "}
+                      to view passed trades again or try different{" "}
+                      <span className="text-primary font-semibold">
+                        filters
+                      </span>
+                      .
+                    </>
+                  ) : selectedNiches.length === 0 && !randomMode ? (
+                    <>
+                      There are no trades found for your{" "}
+                      <span className="text-primary font-semibold">
+                        interests
+                      </span>
+                      . Try enabling{" "}
+                      <span className="text-primary font-semibold">
+                        Random Mode
+                      </span>{" "}
+                      or select some interests to discover more trades!
+                    </>
+                  ) : (
+                    <>
+                      No trades match your current{" "}
+                      <span className="text-primary font-semibold">
+                        filters
+                      </span>
+                      . Try adjusting your{" "}
+                      <span className="text-primary font-semibold">
+                        preferences
+                      </span>{" "}
+                      or enabling Random Mode.
+                    </>
+                  )}
+                </p>
+
+                {showResetOption && (
+                  <div className="mt-6">
+                    <button
+                      onClick={handleResetPassedTrades}
+                      className="px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-lg hover:from-primary/90 hover:to-primary/70 transition-all duration-200 flex items-center gap-2 mx-auto cursor-pointer shadow-lg"
+                    >
+                      <RotateCcw size={20} />
+                      Reset Passed Trades
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
         )}
       </div>
     ),
@@ -798,7 +864,27 @@ export default function Trade() {
               className="max-w-2xl mx-auto"
             >
               <div className="space-y-4">
-                {matches.length === 0 ? (
+                {matchesLoading ? (
+                  // Matches Loading Skeleton
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="bg-neutral-900 rounded-xl p-6 border border-neutral-700"
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="w-16 h-4 bg-neutral-700 rounded animate-pulse"></div>
+                          <div className="w-8 h-8 bg-neutral-700 rounded animate-pulse"></div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="w-full h-4 bg-neutral-700 rounded animate-pulse"></div>
+                          <div className="w-3/4 h-4 bg-neutral-700 rounded animate-pulse"></div>
+                          <div className="w-1/2 h-3 bg-neutral-700 rounded animate-pulse"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : matches.length === 0 ? (
                   <div className="text-center text-neutral-400 py-16">
                     <Heart className="w-16 h-16 mx-auto mb-6 opacity-50" />
                     <h3 className="text-xl font-semibold mb-2">
@@ -829,50 +915,86 @@ export default function Trade() {
                       <motion.div
                         key={match.id}
                         onClick={() => navigate(`/messages/${otherUserId}`)}
-                        className="bg-neutral-900 rounded-xl p-6 border border-neutral-700 cursor-pointer hover:border-primary transition-colors"
+                        className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-6 border border-neutral-700/50 cursor-pointer hover:border-primary/50 hover:from-neutral-800 hover:to-neutral-700 transition-all duration-300 shadow-lg hover:shadow-xl"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3 }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                       >
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="text-sm text-neutral-400">
-                            Match
-                          </span>
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
+                            <span className="text-sm font-medium text-neutral-300 uppercase tracking-wide">
+                              Match
+                            </span>
+                          </div>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               navigate(`/messages/${otherUserId}`);
                             }}
-                            className="text-primary hover:text-primary/80 transition cursor-pointer p-2 rounded-lg hover:bg-primary/10"
+                            className="text-primary hover:text-white transition-all duration-200 p-2 rounded-xl hover:bg-primary/20 group"
                           >
-                            <MessageCircle className="w-6 h-6" />
+                            <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
                           </button>
                         </div>
-                        <div className="space-y-2">
-                          <p className="text-white text-sm">
-                            <span
-                              className="text-primary font-semibold cursor-pointer hover:underline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/user/${otherUserId}`);
-                              }}
-                            >
-                              {otherUserName}
-                            </span>{" "}
-                            wants to trade{" "}
-                            <span className="text-primary font-semibold">
-                              "{otherUserItemTitle}"
-                            </span>{" "}
-                            for your{" "}
-                            <span className="text-primary font-semibold">
-                              "{currentUserItemTitle}"
-                            </span>
-                          </p>
-                          <p className="text-neutral-400 text-xs">
-                            {match.fromLiked && match.toLiked
-                              ? "Mutual match!"
-                              : "Pending response"}
-                          </p>
+
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-3 p-4 bg-neutral-800/50 rounded-xl border border-neutral-700/50">
+                            <div className="flex-1">
+                              <p className="text-white text-sm leading-relaxed">
+                                <span
+                                  className="text-primary font-semibold cursor-pointer hover:underline transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/user/${otherUserId}`);
+                                  }}
+                                >
+                                  {otherUserName}
+                                </span>{" "}
+                                wants to trade{" "}
+                                <span className="text-primary font-semibold">
+                                  "{otherUserItemTitle}"
+                                </span>{" "}
+                                for your{" "}
+                                <span className="text-primary font-semibold">
+                                  "{currentUserItemTitle}"
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`w-2 h-2 rounded-full ${
+                                  match.fromLiked && match.toLiked
+                                    ? "bg-green-500 animate-pulse"
+                                    : "bg-yellow-500"
+                                }`}
+                              ></div>
+                              <p
+                                className={`text-xs font-medium ${
+                                  match.fromLiked && match.toLiked
+                                    ? "text-green-400"
+                                    : "text-yellow-400"
+                                }`}
+                              >
+                                {match.fromLiked && match.toLiked
+                                  ? "Mutual match!"
+                                  : "Pending response"}
+                              </p>
+                            </div>
+
+                            <div className="text-xs text-neutral-500">
+                              {match.timestamp?.toDate?.()
+                                ? new Date(
+                                    match.timestamp.toDate()
+                                  ).toLocaleDateString()
+                                : "Recently"}
+                            </div>
+                          </div>
                         </div>
                       </motion.div>
                     );

@@ -18,6 +18,7 @@ import Cart from "./pages/Cart";
 import Error from "./pages/Error";
 import { CartProvider } from "./hooks/useCart";
 import { AuthProvider } from "./hooks/useAuth";
+import { UnreadMessagesProvider } from "./hooks/useUnreadMessages";
 
 const router = createBrowserRouter([
   {

@@ -17,6 +17,8 @@ import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../utils/firebase";
 import { useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
+import { isValidUsername } from "../utils/helpers";
+import { checkUsernameExists } from "../utils/firebaseHelpers";
 
 const primaryBtn =
   "bg-primary text-primary-foreground hover:bg-primary/80 cursor-pointer transition-all duration-200 active:scale-95 uppercase tracking-widest font-bold disabled:opacity-40 disabled:cursor-not-allowed";
@@ -67,6 +69,7 @@ export default function AuthBox() {
   const [stage, setStage] = useState<AuthStageType>("email");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [country, setCountry] = useState<{
     label: string;
     value: string;
@@ -82,7 +85,12 @@ export default function AuthBox() {
   const [errors, setErrors] = useState<string | null>(null);
 
   const emailValid = isValidEmail(email);
-  const basicValid = name.trim().length > 1 && country && language;
+  const basicValid =
+    name.trim().length > 1 &&
+    username.trim().length > 2 &&
+    isValidUsername(username) &&
+    country &&
+    language;
   const interestsValid = selected.size > 0;
   const passwordStrong = isStrongPassword(password);
 
@@ -99,8 +107,26 @@ export default function AuthBox() {
     }
   };
 
-  const handleBasicContinue = () => {
-    if (!basicValid) return setErrors("Fill out all required fields");
+  const handleBasicContinue = async () => {
+    if (!basicValid) {
+      if (!name.trim() || !username.trim() || !country || !language) {
+        return setErrors("Fill out all required fields");
+      }
+      if (!isValidUsername(username)) {
+        return setErrors(
+          "Username can only contain letters, numbers, and underscores"
+        );
+      }
+      return setErrors("Fill out all required fields");
+    }
+
+    // Check if username already exists
+    const usernameExists = await checkUsernameExists(username);
+    if (usernameExists) {
+      setErrors("Username already exists. Please choose a different one.");
+      return;
+    }
+
     setStage("interests");
   };
 
@@ -124,7 +150,8 @@ export default function AuthBox() {
           displayName: name,
         });
         await setDoc(doc(db, "users", res.user.uid), {
-          name,
+          displayName: name,
+          username,
           avatar: res.user.photoURL || "",
           country: country?.value || "",
           language: language?.value || "",
@@ -258,6 +285,35 @@ export default function AuthBox() {
                   placeholder="John Doe"
                   className={`w-full mb-3 ${mutedInput}`}
                 />
+
+                <label className="block text-sm sm:text-base text-left mb-1">
+                  Username
+                </label>
+                <input
+                  value={username}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    setErrors(null);
+                  }}
+                  placeholder="johndoe123"
+                  className={`w-full mb-3 ${mutedInput} ${
+                    username && !isValidUsername(username)
+                      ? "border-red-500 focus:border-red-500"
+                      : username && isValidUsername(username)
+                      ? "border-green-500 focus:border-green-500"
+                      : ""
+                  }`}
+                />
+                {username && !isValidUsername(username) && (
+                  <p className="text-red-500 text-xs mb-3">
+                    Username can only contain letters, numbers, and underscores
+                  </p>
+                )}
+                {!username && (
+                  <p className="text-neutral-400 text-xs mb-3">
+                    Only letters, numbers, and underscores allowed
+                  </p>
+                )}
 
                 <label className="block text-sm sm:text-base text-left mb-1">
                   Country

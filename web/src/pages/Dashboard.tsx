@@ -1,135 +1,611 @@
-import { ArrowRightIcon, BellIcon, SearchIcon, UserIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  ArrowRight,
+  Bell,
+  Search,
+  User,
+  Heart,
+  Bookmark,
+  MessageCircle,
+  TrendingUp,
+  Clock,
+  Star,
+  Plus,
+  ShoppingCart,
+  Eye,
+  Calendar,
+  MapPin,
+  Activity,
+} from "lucide-react";
 import { SiInstagram, SiYoutube } from "@icons-pack/react-simple-icons";
-import { Link } from "react-router";
-import { useState } from "react";
+import { Link, useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
-import { motion } from "motion/react";
+import { useUnreadMessages } from "../hooks/useUnreadMessages";
+import { motion, AnimatePresence } from "framer-motion";
 import PageWrapper from "../components/PageWrapper";
+import TradeDetailModal from "../components/TradeDetailModal";
+import PostDetailModal from "../components/PostDetailModal";
+import {
+  fetchUserData,
+  fetchUserTrades,
+  fetchSavedPosts,
+} from "../utils/firebaseHelpers";
+import { INTERESTS } from "../utils/constants";
+import { getFlagEmoji } from "../utils/helpers";
+
+interface DashboardStats {
+  totalTrades: number;
+  savedPosts: number;
+  unreadMessages: number;
+  recentActivity: number;
+}
 
 export default function Dashboard() {
-  const [updates, setUpdates] = useState([]);
-  const [loadedImages, setLoadedImages] = useState<number[]>([]);
   const { user } = useAuth();
+  const { totalUnread } = useUnreadMessages();
+  const navigate = useNavigate();
+  const [userData, setUserData] = useState<any>(null);
+  const [userTrades, setUserTrades] = useState<any[]>([]);
+  const [savedPosts, setSavedPosts] = useState<any[]>([]);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalTrades: 0,
+    savedPosts: 0,
+    unreadMessages: 0,
+    recentActivity: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedInterest, setSelectedInterest] = useState<string | null>(null);
+  const [showTradeModal, setShowTradeModal] = useState(false);
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [selectedTrade, setSelectedTrade] = useState<any>(null);
+  const [selectedPost, setSelectedPost] = useState<any>(null);
 
-  const handleImageLoad = (index: number) => {
-    setLoadedImages((prev) => [...prev, index]);
+  useEffect(() => {
+    if (!user) return;
+
+    const loadDashboardData = async () => {
+      try {
+        setLoading(true);
+        const [userDataResult, tradesResult, savedPostsResult] =
+          await Promise.all([
+            fetchUserData(user.uid),
+            fetchUserTrades(user.uid),
+            fetchSavedPosts(user.uid),
+          ]);
+
+        setUserData(userDataResult);
+        setUserTrades(tradesResult);
+        setSavedPosts(savedPostsResult);
+
+        setStats({
+          totalTrades: tradesResult.length,
+          savedPosts: savedPostsResult.length,
+          unreadMessages: totalUnread,
+          recentActivity: tradesResult.filter(
+            (trade) =>
+              trade.timestamp?.toDate &&
+              new Date(trade.timestamp.toDate()) >
+                new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          ).length,
+        });
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboardData();
+  }, [user]);
+
+  // Update stats when totalUnread changes
+  useEffect(() => {
+    setStats((prev) => ({
+      ...prev,
+      unreadMessages: totalUnread,
+    }));
+  }, [totalUnread]);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
   };
 
-  return (
-    <PageWrapper className="flex h-screen w-full bg-neutral-950 text-white">
-      <main className="flex-1 flex flex-col md:flex-row p-4 gap-4 overflow-hidden">
-        {/* Search & Feed Section */}
-        <section className="flex-[2] rounded-2xl p-4 flex flex-col">
-          <div className="mb-6 min-h-[56px]">
-            {user?.displayName ? (
-              <motion.h1
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.5 }}
-                className="text-5xl font-bold"
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case "add-trade":
+        navigate("/add");
+        break;
+      case "messages":
+        navigate("/messages");
+        break;
+      case "search":
+        navigate("/search");
+        break;
+      case "profile":
+        navigate("/profile");
+        break;
+    }
+  };
+
+  const handleTradeClick = (trade: any) => {
+    setSelectedTrade(trade);
+    setShowTradeModal(true);
+  };
+
+  const handlePostClick = (post: any) => {
+    setSelectedPost(post);
+    setShowPostModal(true);
+  };
+
+  const filteredInterests = INTERESTS.filter((interest) =>
+    interest.label.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const recentTrades = userTrades.slice(0, 4);
+  const recentSaved = savedPosts.slice(0, 4);
+
+  if (loading) {
+    return (
+      <PageWrapper className="flex h-screen w-full bg-neutral-950 text-white">
+        <div className="flex-1 p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+            {/* Loading skeletons */}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-neutral-900 rounded-2xl p-6 animate-pulse"
               >
-                Good Evening, {user?.displayName}
-              </motion.h1>
-            ) : (
-              <div className="w-3/4 h-12 bg-neutral-700 rounded-xl animate-pulse" />
-            )}
-          </div>
-
-          <div className="mb-4">
-            <h2 className="text-3xl font-semibold text-primary flex items-center gap-2">
-              <SearchIcon size={30} /> Quick Search
-            </h2>
-            <input
-              type="text"
-              placeholder="Type something..."
-              className="mt-2 w-full rounded-md bg-muted text-sm px-3 py-2 focus:outline-none focus:ring-2 ring-primary"
-            />
-          </div>
-
-          <div className="flex-1 overflow-y-auto grid grid-cols-4 gap-4 pr-2">
-            {Array.from({ length: 12 }).map((_, i) => {
-              const isLoaded = loadedImages.includes(i);
-              return (
-                <div
-                  key={i}
-                  className="rounded-xl aspect-square bg-white/10 relative "
-                >
-                  {!isLoaded && (
-                    <div className="absolute inset-0 animate-pulse rounded-xl bg-neutral-700" />
-                  )}
-                  <img
-                    src={`https://picsum.photos/300/300?random=${i}`}
-                    alt={`img-${i}`}
-                    className={`w-full h-full object-cover rounded-xl transition-all duration-500 ${
-                      isLoaded ? "opacity-100" : "opacity-0"
-                    }`}
-                    onLoad={() => handleImageLoad(i)}
-                    loading="lazy"
-                  />
+                <div className="h-6 bg-neutral-800 rounded mb-4"></div>
+                <div className="space-y-3">
+                  <div className="h-4 bg-neutral-800 rounded"></div>
+                  <div className="h-4 bg-neutral-800 rounded w-3/4"></div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </PageWrapper>
+    );
+  }
 
-        {/* Updates and Footer Section */}
-        <section className="flex-1 flex flex-col gap-4">
-          {/* Updates */}
-          <div className="flex-[2] flex-col bg-neutral-900 rounded-2xl p-4">
-            <h2 className="text-3xl font-bold text-primary flex items-center gap-2">
-              <BellIcon size={30} /> Updates
-            </h2>
-            {updates.length === 0 && (
-              <p className="text-sm text-white/60 mt-12 text-center">
-                No updates available at the moment.
+  return (
+    <PageWrapper className="flex h-screen w-full bg-neutral-950 text-white overflow-hidden">
+      <div className="flex-1 p-6 overflow-y-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-4xl font-bold">
+                {getGreeting()}, {userData?.name || user?.displayName || "User"}
+              </h1>
+              <p className="text-neutral-400 mt-1">
+                {userData?.country && (
+                  <span className="flex items-center gap-2">
+                    <span>{getFlagEmoji(userData.country)}</span>
+                    <span>{userData.country}</span>
+                  </span>
+                )}
               </p>
-            )}
-            <div className="mt-4 space-y-3 text-sm">
-              {updates.map((update: any, i: number) => (
-                <UpdateItem key={i} message={update.message} />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Stats Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+        >
+          <StatCard
+            title="Active Trades"
+            value={stats.totalTrades}
+            icon={<TrendingUp className="w-5 h-5" />}
+            color="text-green-400"
+            onClick={() => navigate("/profile?tab=trades")}
+          />
+          <StatCard
+            title="Saved Posts"
+            value={stats.savedPosts}
+            icon={<Bookmark className="w-5 h-5" />}
+            color="text-blue-400"
+            onClick={() => navigate("/profile?tab=saved")}
+          />
+          <StatCard
+            title="Unread Messages"
+            value={stats.unreadMessages}
+            icon={<MessageCircle className="w-5 h-5" />}
+            color="text-purple-400"
+            onClick={() => navigate("/messages")}
+          />
+          <StatCard
+            title="Recent Activity"
+            value={stats.recentActivity}
+            icon={<Activity className="w-5 h-5" />}
+            color="text-orange-400"
+            onClick={() => navigate("/trade")}
+          />
+        </motion.div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Search & Interests */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="lg:col-span-2 bg-neutral-900 rounded-2xl p-6"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <Search className="w-6 h-6 text-primary" />
+              <h2 className="text-2xl font-bold">Discover Interests</h2>
+            </div>
+
+            <div className="mb-6">
+              <input
+                type="text"
+                placeholder="Search interests..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-neutral-800 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+              {filteredInterests.map((interest) => (
+                <InterestCard
+                  key={interest.id}
+                  interest={interest}
+                  selectedInterest={selectedInterest}
+                  onSelect={setSelectedInterest}
+                />
               ))}
             </div>
-          </div>
+          </motion.div>
+
+          {/* Recent Trades & Saved Posts */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-neutral-900 rounded-2xl p-6"
+          >
+            {/* Recent Trades Section */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Recent Trades</h2>
+                <Link
+                  to="/profile?tab=trades"
+                  className="text-primary hover:underline text-sm"
+                >
+                  View All
+                </Link>
+              </div>
+              <div className="space-y-4">
+                {recentTrades.length > 0 ? (
+                  recentTrades.map((trade) => (
+                    <TradeCard
+                      key={trade.id}
+                      trade={trade}
+                      onClick={() => handleTradeClick(trade)}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-neutral-400">
+                    <TrendingUp className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>No trades yet</p>
+                    <button
+                      onClick={() => navigate("/add")}
+                      className="text-primary hover:underline text-sm mt-2"
+                    >
+                      Add your first trade
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Saved Posts Section */}
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Saved Posts</h2>
+                <Link
+                  to="/profile?tab=saved"
+                  className="text-primary hover:underline text-sm"
+                >
+                  View All
+                </Link>
+              </div>
+              <div className="space-y-4">
+                {recentSaved.length > 0 ? (
+                  recentSaved.map((post) => (
+                    <SavedPostCard
+                      key={post.id}
+                      post={post}
+                      onClick={() => handlePostClick(post)}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-neutral-400">
+                    <Bookmark className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>No saved posts</p>
+                    <p className="text-xs mt-1">
+                      Posts you save will appear here
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
 
           {/* Footer */}
-          <div className="flex-[1] bg-neutral-900 rounded-2xl p-6 flex flex-col justify-between">
-            <h2 className="text-5xl font-bold">Mangrov</h2>
-            <p className="text-xl">
-              Shop through <span className="text-primary">sustainable</span>{" "}
-              products enabling
-              <span className="text-primary"> memorable experiences</span>
-            </p>
-            <div className="flex items-center justify-start space-x-4">
-              <Link
-                to={"/about"}
-                className="border-2 border-primary rounded-lg bg-transparent tracking-widest text-white px-12 py-1.5 uppercase font-extrabold text-lg hover:bg-primary transition-all duration-300 hover:z-50"
-              >
-                About
-              </Link>
-              <Link to={"https://instagram.com/_mangrov_"} target="_blank">
-                <SiInstagram className="text-white w-10 h-10" />
-              </Link>
-              <Link to={"https://youtube.com"} target="_blank">
-                <SiYoutube className="text-white w-10 h-10" />
-              </Link>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="lg:col-span-3 bg-neutral-900 rounded-2xl p-6"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-bold mb-2">Mangrov</h2>
+                <p className="text-neutral-400">
+                  Shop through <span className="text-primary">sustainable</span>{" "}
+                  products enabling
+                  <span className="text-primary"> memorable experiences</span>
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <Link
+                  to="/about"
+                  className="border-2 border-primary rounded-lg bg-transparent tracking-widest text-white px-8 py-2 uppercase font-bold hover:bg-primary transition-all duration-300"
+                >
+                  About
+                </Link>
+                <Link to="https://instagram.com/_mangrov_" target="_blank">
+                  <SiInstagram className="text-white w-8 h-8 hover:text-primary transition-colors" />
+                </Link>
+                <Link to="https://youtube.com" target="_blank">
+                  <SiYoutube className="text-white w-8 h-8 hover:text-primary transition-colors" />
+                </Link>
+              </div>
             </div>
-            <p className="text-xs text-white/40 mt-2">@ 2025 Mangrov</p>
-          </div>
-        </section>
-      </main>
+            <p className="text-xs text-neutral-500 mt-4">© 2025 Mangrov</p>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      <AnimatePresence mode="wait">
+        {showTradeModal && selectedTrade && (
+          <TradeDetailModal
+            trade={selectedTrade}
+            isOpen={showTradeModal}
+            onClose={() => {
+              setShowTradeModal(false);
+              setSelectedTrade(null);
+            }}
+            onTradeUpdate={(updatedTrade) => {
+              setUserTrades((prev) =>
+                prev.map((trade) =>
+                  trade.id === updatedTrade.id
+                    ? { ...trade, ...updatedTrade }
+                    : trade
+                )
+              );
+              setSelectedTrade(updatedTrade);
+            }}
+          />
+        )}
+        {showPostModal && selectedPost && (
+          <PostDetailModal
+            post={selectedPost}
+            onClose={() => {
+              setShowPostModal(false);
+              setSelectedPost(null);
+            }}
+            user={user}
+            liked={false}
+            saved={true}
+            handleLike={() => {}}
+            handleSave={() => {}}
+          />
+        )}
+      </AnimatePresence>
     </PageWrapper>
   );
 }
 
-function UpdateItem({ message }: { message: string }) {
+// Stat Card Component
+function StatCard({
+  title,
+  value,
+  icon,
+  color,
+  onClick,
+}: {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  color: string;
+  onClick: () => void;
+}) {
   return (
-    <div className="flex items-center justify-between px-3 py-2 rounded-md bg-[#1a1a1a]">
-      <div className="flex items-center gap-2">
-        <UserIcon className="w-4 h-4" />
-        <span className="text-white text-xs">{message}</span>
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className="bg-neutral-900 rounded-xl p-4 cursor-pointer hover:bg-neutral-800 transition-colors"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className={`${color}`}>{icon}</div>
+        <ArrowRight className="w-4 h-4 text-neutral-400" />
       </div>
-      <ArrowRightIcon className="w-4 h-4 text-primary" />
-    </div>
+      <div className="text-2xl font-bold">{value}</div>
+      <div className="text-sm text-neutral-400">{title}</div>
+    </motion.div>
+  );
+}
+
+// Quick Action Card Component
+function QuickActionCard({
+  title,
+  description,
+  icon,
+  onClick,
+  color,
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  color: string;
+}) {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className="bg-neutral-800 rounded-lg p-4 cursor-pointer hover:bg-neutral-700 transition-colors"
+    >
+      <div className="flex items-center gap-3">
+        <div className={`${color} p-2 rounded-lg`}>{icon}</div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-white">{title}</h3>
+          <p className="text-sm text-neutral-400">{description}</p>
+        </div>
+        <ArrowRight className="w-4 h-4 text-neutral-400" />
+      </div>
+    </motion.div>
+  );
+}
+
+// Trade Card Component
+function TradeCard({ trade, onClick }: { trade: any; onClick?: () => void }) {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      className="bg-neutral-800 rounded-lg p-3 cursor-pointer hover:bg-neutral-700 transition-colors"
+      onClick={onClick}
+    >
+      <div className="flex items-center gap-3">
+        <img
+          src={trade.images?.[0]}
+          alt={trade.title}
+          className="w-12 h-12 rounded-lg object-cover"
+        />
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-white truncate">{trade.title}</h4>
+          <p className="text-xs text-neutral-400">
+            {trade.timestamp?.toDate?.()
+              ? new Date(trade.timestamp.toDate()).toLocaleDateString()
+              : "Recently"}
+          </p>
+        </div>
+        <div className="flex items-center gap-1">
+          <Eye className="w-4 h-4 text-neutral-400" />
+          <span className="text-xs text-neutral-400">0</span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// Interest Card Component
+function InterestCard({
+  interest,
+  selectedInterest,
+  onSelect,
+}: {
+  interest: { id: string; label: string; img: string };
+  selectedInterest: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const navigate = useNavigate();
+
+  const handleInterestClick = () => {
+    onSelect(interest.id);
+    navigate(`/search?interest=${interest.id}`);
+  };
+
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={handleInterestClick}
+      className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer transition-all duration-200 ${
+        selectedInterest === interest.id
+          ? "ring-2 ring-primary"
+          : "hover:ring-2 hover:ring-primary/50"
+      }`}
+    >
+      {/* Loading skeleton */}
+      {!imageLoaded && !imageError && (
+        <div className="absolute inset-0 bg-neutral-800 animate-pulse" />
+      )}
+
+      {/* Error fallback */}
+      {imageError && (
+        <div className="absolute inset-0 bg-neutral-800 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 bg-neutral-700 rounded-full mx-auto mb-2" />
+            <p className="text-xs text-neutral-400">{interest.label}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Actual image */}
+      <img
+        src={interest.img}
+        alt={interest.label}
+        className={`w-full h-full object-cover transition-opacity duration-300 ${
+          imageLoaded ? "opacity-100" : "opacity-0"
+        }`}
+        onLoad={() => setImageLoaded(true)}
+        onError={() => setImageError(true)}
+        loading="lazy"
+      />
+
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+
+      {/* Label */}
+      <div className="absolute bottom-3 left-3 right-3">
+        <p className="text-white text-sm font-semibold">{interest.label}</p>
+      </div>
+    </motion.div>
+  );
+}
+
+// Saved Post Card Component
+function SavedPostCard({ post, onClick }: { post: any; onClick?: () => void }) {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      className="bg-neutral-800 rounded-lg p-3 cursor-pointer hover:bg-neutral-700 transition-colors"
+      onClick={onClick}
+    >
+      <div className="flex items-center gap-3">
+        <img
+          src={post.images?.[0]}
+          alt={post.title}
+          className="w-12 h-12 rounded-lg object-cover"
+        />
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-white truncate">{post.title}</h4>
+          <p className="text-xs text-neutral-400">
+            {post.timestamp?.toDate?.()
+              ? new Date(post.timestamp.toDate()).toLocaleDateString()
+              : "Recently"}
+          </p>
+        </div>
+        <Bookmark className="w-4 h-4 text-primary fill-current" />
+      </div>
+    </motion.div>
   );
 }

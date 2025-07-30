@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Heart, Bookmark, ExternalLink, ShoppingCart } from "lucide-react";
+import {
+  X,
+  Heart,
+  Bookmark,
+  ExternalLink,
+  ShoppingCart,
+  Send,
+} from "lucide-react";
 import {
   collection,
   onSnapshot,
@@ -47,32 +54,57 @@ export default function PostDetailModal({
   const [replyText, setReplyText] = useState("");
   const [imgLoaded, setImgLoaded] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const pickerRef = useRef<HTMLDivElement | null>(null);
+  const commentInputRef = useRef<HTMLInputElement | null>(null);
 
   const products = useBusinessProducts(post.business);
 
   const handleComment = async () => {
-    if (!newComment.trim()) return;
-    await addDoc(collection(db, "posts", post.id, "comments"), {
-      text: newComment,
-      user: user.uid,
-      timestamp: serverTimestamp(),
-    });
-    setNewComment("");
+    if (!newComment.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await addDoc(collection(db, "posts", post.id, "comments"), {
+        text: newComment.trim(),
+        user: user.uid,
+        timestamp: serverTimestamp(),
+      });
+      setNewComment("");
+    } catch (error) {
+      console.error("Error posting comment:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleReply = async (commentId: string, replyToUserId: string) => {
-    if (!replyText.trim()) return;
-    await addDoc(collection(db, "posts", post.id, "comments"), {
-      text: replyText,
-      user: user.uid,
-      timestamp: serverTimestamp(),
-      replyToId: commentId,
-      replyToUserId,
-    });
-    setReplyText("");
-    setReplyingTo(null);
+    if (!replyText.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await addDoc(collection(db, "posts", post.id, "comments"), {
+        text: replyText.trim(),
+        user: user.uid,
+        timestamp: serverTimestamp(),
+        replyToId: commentId,
+        replyToUserId,
+      });
+      setReplyText("");
+      setReplyingTo(null);
+    } catch (error) {
+      console.error("Error posting reply:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleComment();
+    }
   };
 
   useEffect(() => {
@@ -181,34 +213,45 @@ export default function PostDetailModal({
             </p>
           </div>
 
-          <div className="flex-1 overflow-y-auto max-h-[60vh] p-4 pt-2">
-            {comments.length === 0 ? (
-              <p className="text-xs text-white/60">No comments yet.</p>
-            ) : (
-              comments.map((comment) => (
-                <CommentItem
-                  key={comment.id}
-                  postId={post.id}
-                  comment={comment}
-                  onReplyClick={(id) =>
-                    setReplyingTo(replyingTo === id ? null : id)
-                  }
-                  isReplying={replyingTo === comment.id}
-                  replyText={replyText}
-                  onReplyChange={setReplyText}
-                  onReplySubmit={handleReply}
-                />
-              ))
-            )}
+          {/* Comments Section */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="space-y-3">
+              {comments.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-white/60">No comments yet.</p>
+                  <p className="text-xs text-white/40 mt-1">
+                    Be the first to comment!
+                  </p>
+                </div>
+              ) : (
+                comments.map((comment) => (
+                  <CommentItem
+                    key={comment.id}
+                    postId={post.id}
+                    comment={comment}
+                    onReplyClick={(id) =>
+                      setReplyingTo(replyingTo === id ? null : id)
+                    }
+                    isReplying={replyingTo === comment.id}
+                    replyText={replyText}
+                    onReplyChange={setReplyText}
+                    onReplySubmit={handleReply}
+                    isSubmitting={isSubmitting}
+                  />
+                ))
+              )}
+            </div>
           </div>
 
-          <div className="border-t border-neutral-800 p-4 space-y-3">
+          {/* Action Bar */}
+          <div className="border-t border-neutral-800 p-4 space-y-4">
+            {/* Like, Save, and Other Actions */}
             <div className="flex items-center gap-6">
               {post.likes !== false && (
                 <motion.button
                   whileTap={{ scale: 0.9 }}
                   onClick={handleLike}
-                  className="cursor-pointer"
+                  className="cursor-pointer hover:scale-105 transition-transform"
                 >
                   {liked ? (
                     <Heart
@@ -217,7 +260,10 @@ export default function PostDetailModal({
                       fill="currentColor"
                     />
                   ) : (
-                    <Heart size={22} className="text-white" />
+                    <Heart
+                      size={22}
+                      className="text-white hover:text-red-400"
+                    />
                   )}
                 </motion.button>
               )}
@@ -225,7 +271,7 @@ export default function PostDetailModal({
                 <motion.button
                   whileTap={{ scale: 0.9 }}
                   onClick={handleSave}
-                  className="cursor-pointer"
+                  className="cursor-pointer hover:scale-105 transition-transform"
                 >
                   {saved ? (
                     <Bookmark
@@ -234,7 +280,10 @@ export default function PostDetailModal({
                       fill="currentColor"
                     />
                   ) : (
-                    <Bookmark size={22} className="text-white" />
+                    <Bookmark
+                      size={22}
+                      className="text-white hover:text-primary"
+                    />
                   )}
                 </motion.button>
               )}
@@ -243,9 +292,12 @@ export default function PostDetailModal({
                 <div className="relative" ref={pickerRef}>
                   <button
                     onClick={() => setShowPicker(!showPicker)}
-                    className="cursor-pointer"
+                    className="cursor-pointer hover:scale-105 transition-transform"
                   >
-                    <ShoppingCart size={22} className={"text-white"} />
+                    <ShoppingCart
+                      size={22}
+                      className="text-white hover:text-primary"
+                    />
                   </button>
 
                   <AnimatePresence>
@@ -263,28 +315,36 @@ export default function PostDetailModal({
                   <a
                     href={`/business/${post.business}`}
                     target="_blank"
-                    className="cursor-pointer"
+                    className="cursor-pointer hover:scale-105 transition-transform"
                   >
-                    <ExternalLink size={22} />
+                    <ExternalLink
+                      size={22}
+                      className="text-white hover:text-primary"
+                    />
                   </a>
                 )}
               </div>
             </div>
 
+            {/* Comment Input */}
             {post.comments !== false && (
-              <div className="flex gap-2">
+              <div className="flex items-center gap-3 bg-neutral-800/50 rounded-lg p-3">
                 <input
-                  className="flex-1 rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white"
+                  ref={commentInputRef}
+                  className="flex-1 bg-transparent text-white placeholder-white/60 text-sm outline-none"
                   placeholder="Add a comment..."
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  disabled={isSubmitting}
                 />
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={handleComment}
-                  className="text-sm font-semibold text-primary hover:underline cursor-pointer"
+                  disabled={!newComment.trim() || isSubmitting}
+                  className="text-primary hover:text-primary/80 disabled:text-white/40 disabled:cursor-not-allowed transition-colors"
                 >
-                  Post
+                  <Send size={18} />
                 </motion.button>
               </div>
             )}

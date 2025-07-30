@@ -5,6 +5,7 @@ import Sidebar from "../components/Sidebar";
 import "../utils/firebase";
 import { AnimatePresence } from "motion/react";
 import { useAuth } from "../hooks/useAuth";
+import { UnreadMessagesProvider } from "../hooks/useUnreadMessages";
 
 export default function Root() {
   const { isSignedIn, pending } = useAuth();
@@ -49,22 +50,24 @@ export default function Root() {
   }, [assetsLoaded, isNavigating]);
 
   return (
-    <div className="max-h-screen font-inter bg-transparent-950 text-white">
-      {/* <AnimatePresence>
-        {spinnerVisible && location.pathname !== "/" && (
-          <GlobalSpinner
-            key="global-spinner"
-            onDone={() => setSpinnerVisible(false)}
-          />
-        )}
-      </AnimatePresence> */}
+    <UnreadMessagesProvider>
+      <div className="max-h-screen font-inter bg-transparent-950 text-white">
+        {/* <AnimatePresence>
+          {spinnerVisible && location.pathname !== "/" && (
+            <GlobalSpinner
+              key="global-spinner"
+              onDone={() => setSpinnerVisible(false)}
+            />
+          )}
+        </AnimatePresence> */}
 
-      {showSidebar && <Sidebar />}
-      <main className={`${showSidebar ? "pl-14 md:pl-20" : ""}`}>
-        <AnimatePresence mode="wait">
-          <Outlet key={location.pathname} />
-        </AnimatePresence>
-      </main>
-    </div>
+        {showSidebar && <Sidebar />}
+        <main className={`${showSidebar ? "pl-14 md:pl-20" : ""}`}>
+          <AnimatePresence mode="wait">
+            <Outlet key={location.pathname} />
+          </AnimatePresence>
+        </main>
+      </div>
+    </UnreadMessagesProvider>
   );
 }

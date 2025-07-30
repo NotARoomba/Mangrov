@@ -34,7 +34,7 @@ export default function Error() {
           <div className="space-y-4">
             <motion.button
               onClick={() => navigate("/")}
-              className="w-full bg-gradient-to-r from-primary to-primary/80 text-white px-8 py-4 rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all duration-200 flex items-center justify-center gap-3 font-semibold shadow-lg"
+              className="w-full bg-gradient-to-r from-primary to-primary/80 text-white px-8 py-4 rounded-xl hover:from-primary/90 hover:to-primary/70 transition-all duration-200 flex items-center justify-center gap-3 font-semibold shadow-lg cursor-pointer"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -44,7 +44,7 @@ export default function Error() {
 
             <motion.button
               onClick={() => window.location.reload()}
-              className="w-full bg-neutral-800 text-white px-8 py-4 rounded-xl hover:bg-neutral-700 transition-all duration-200 font-semibold"
+              className="w-full bg-neutral-800 text-white px-8 py-4 rounded-xl hover:bg-neutral-700 transition-all duration-200 font-semibold cursor-pointer"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >

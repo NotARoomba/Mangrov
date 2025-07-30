@@ -16,6 +16,8 @@ export type Post = {
   productIds: string[];
   uid?: string;
   isAvailable?: boolean;
+  price?: number;
+  views?: number;
 };
 
 export type User = {
@@ -26,4 +28,27 @@ export type User = {
   interests?: string[];
   bio?: string;
   email?: string;
+  country?: string;
+  language?: string;
+};
+
+export type Message = {
+  id: string;
+  text: string;
+  imageUrl?: string;
+  senderId: string;
+  receiverId: string;
+  timestamp: any;
+  read: boolean;
+  isSystemMessage?: boolean;
+};
+
+export type Chat = {
+  id: string;
+  participants: string[];
+  lastMessage?: Message;
+  lastMessageTime?: any;
+  unreadCount: number;
+  otherUser?: User;
+  isTradeMatch?: boolean;
 };
