@@ -8,8 +8,6 @@ import {
   orderBy,
   limit,
   startAfter,
-  doc,
-  getDoc,
   where,
   DocumentSnapshot,
 } from "firebase/firestore";
@@ -212,9 +210,7 @@ export default function Search() {
     setSearchParams({});
   };
 
-  const isPostSaved = (postId: string) => {
-    return savedPosts.some((post) => post.id === postId);
-  };
+
 
   return (
     <PageWrapper className="min-h-screen bg-neutral-950 text-white overflow-scroll">

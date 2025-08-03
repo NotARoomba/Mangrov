@@ -2,13 +2,11 @@ import { ChevronDown, Plus, X } from "lucide-react";
 import { motion } from "framer-motion";
 import Select, { components, type StylesConfig } from "react-select";
 import { INTERESTS } from "../utils/constants";
-import type { title } from "motion/react-client";
 import BackButton from "./BackButton";
 import { Timestamp, addDoc, collection } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useState } from "react";
 import { storage, db } from "../utils/firebase";
-import GreenSpinner from "./GreenSpinner";
 import GlobalSpinner from "./GlobalSpinner";
 import { useAuth } from "../hooks/useAuth";
 

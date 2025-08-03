@@ -18,7 +18,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "../utils/firebase";
 import { useAuth } from "../hooks/useAuth";
 import { useUnreadMessages } from "../hooks/useUnreadMessages";
-import { useParams, useNavigate, useLocation } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import PageWrapper from "../components/PageWrapper";
 import { Search } from "lucide-react";
 import type { User } from "../utils/types";
@@ -61,7 +61,7 @@ const ChatWindow = memo(
     isLoading?: boolean;
   }) => {
     const { user } = useAuth();
-    const { markAsRead } = useUnreadMessages();
+
     const [newMessage, setNewMessage] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -598,8 +598,8 @@ export default function Messages() {
   const { user } = useAuth();
   const { userId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { markAsRead, hasUnread, getUnreadCount } = useUnreadMessages();
+
+  const { hasUnread, getUnreadCount } = useUnreadMessages();
 
   // State
   const [chats, setChats] = useState<Chat[]>([]);

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Image as ImageIcon, ArrowLeft } from "lucide-react";
+import { Send, Image as ImageIcon } from "lucide-react";
 import {
   collection,
   addDoc,
@@ -11,7 +11,6 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "../utils/firebase";
 import { useAuth } from "../hooks/useAuth";
-import { useUnreadMessages } from "../hooks/useUnreadMessages";
 import type { Chat, Message, User } from "../utils/types";
 
 interface ChatWindowProps {
@@ -30,7 +29,7 @@ export default function ChatWindow({
   isLoading = false,
 }: ChatWindowProps) {
   const { user } = useAuth();
-  const { markAsRead } = useUnreadMessages();
+
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);

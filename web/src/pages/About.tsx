@@ -4,13 +4,11 @@ import {
   ShoppingBag,
   Users,
   Sparkles,
-  Globe,
   TrendingUp,
   Heart,
   ArrowRight,
   CheckCircle,
   Zap,
-  ChevronDown,
   ArrowUp,
 } from "lucide-react";
 import { useNavigate } from "react-router";
@@ -48,18 +46,7 @@ export default function About() {
     };
   }, []);
 
-  const isMobile = windowWidth < 768;
 
-  // Scroll to section function
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
-  };
 
   return (
     <PageWrapper className="min-h-screen bg-neutral-950 overflow-hidden">

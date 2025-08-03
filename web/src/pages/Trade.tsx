@@ -20,7 +20,6 @@ import {
   X,
   Heart,
   MessageCircle,
-  ArrowLeft,
   ArrowRight,
   Filter,
   ChevronUp,
@@ -538,8 +537,6 @@ export default function Trade() {
     onSwipedRight: () => handleSwipe("right"),
     trackMouse: true,
   });
-
-  const currentPost = posts[currentIndex];
 
   // Memoized swipe area to prevent rerenders
   const swipeArea = useMemo(

@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
-import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "../hooks/useAuth";
+import { motion } from "framer-motion";
 import PageWrapper from "../components/PageWrapper";
-import { ArrowLeft, Package, User } from "lucide-react";
+import { ArrowLeft, Package } from "lucide-react";
 import type { Post, User as UserType } from "../utils/types";
 import {
   getEarthToneColor,
@@ -14,7 +13,7 @@ import { fetchUserData, fetchUserTrades } from "../utils/firebaseHelpers";
 
 export default function UserProfile() {
   const { userId } = useParams();
-  const { user } = useAuth();
+
   const navigate = useNavigate();
   const [userData, setUserData] = useState<UserType | null>(null);
   const [userTrades, setUserTrades] = useState<Post[]>([]);

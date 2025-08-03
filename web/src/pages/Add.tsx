@@ -1,13 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Select, { components, type StylesConfig } from "react-select";
-import { ArrowLeftRight, ChevronDown, Plus, PlusCircle, X } from "lucide-react";
-import { INTERESTS } from "../utils/constants";
+import { ArrowLeftRight, PlusCircle } from "lucide-react";
 import PageWrapper from "../components/PageWrapper";
-import BackButton from "../components/BackButton";
-import { db, storage } from "../utils/firebase"; // assume initialized
-import { collection, addDoc, Timestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import ImageStrip from "../components/ImageStrip";
 import useWindowSize from "../hooks/useWindowSize";
 import AddBox from "../components/AddBox";

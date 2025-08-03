@@ -1,20 +1,11 @@
 import { useEffect, useState } from "react";
 import {
   ArrowRight,
-  Bell,
   Search,
-  User,
-  Heart,
   Bookmark,
   MessageCircle,
   TrendingUp,
-  Clock,
-  Star,
-  Plus,
-  ShoppingCart,
   Eye,
-  Calendar,
-  MapPin,
   Activity,
 } from "lucide-react";
 import { SiInstagram, SiYoutube } from "@icons-pack/react-simple-icons";
@@ -112,23 +103,6 @@ export default function Dashboard() {
     if (hour < 12) return "Good Morning";
     if (hour < 17) return "Good Afternoon";
     return "Good Evening";
-  };
-
-  const handleQuickAction = (action: string) => {
-    switch (action) {
-      case "add-trade":
-        navigate("/add");
-        break;
-      case "messages":
-        navigate("/messages");
-        break;
-      case "search":
-        navigate("/search");
-        break;
-      case "profile":
-        navigate("/profile");
-        break;
-    }
   };
 
   const handleTradeClick = (trade: any) => {
@@ -451,37 +425,6 @@ function StatCard({
 }
 
 // Quick Action Card Component
-function QuickActionCard({
-  title,
-  description,
-  icon,
-  onClick,
-  color,
-}: {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-  color: string;
-}) {
-  return (
-    <motion.div
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className="bg-neutral-800 rounded-lg p-4 cursor-pointer hover:bg-neutral-700 transition-colors"
-    >
-      <div className="flex items-center gap-3">
-        <div className={`${color} p-2 rounded-lg`}>{icon}</div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-white">{title}</h3>
-          <p className="text-sm text-neutral-400">{description}</p>
-        </div>
-        <ArrowRight className="w-4 h-4 text-neutral-400" />
-      </div>
-    </motion.div>
-  );
-}
 
 // Trade Card Component
 function TradeCard({ trade, onClick }: { trade: any; onClick?: () => void }) {

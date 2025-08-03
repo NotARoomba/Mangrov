@@ -26,7 +26,6 @@ type Props = {
 };
 
 export default function CommentItem({
-  postId,
   comment,
   onReplyClick,
   isReplying,

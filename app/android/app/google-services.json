@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "936868961990",
+    "project_id": "mangrov-cf6e2",
+    "storage_bucket": "mangrov-cf6e2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:936868961990:android:aecb96117437bce9a501c7",
+        "android_client_info": {
+          "package_name": "com.example.mangrov"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFSNVuaG2FqFQZPig_sM1qT6JOa51_JEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
