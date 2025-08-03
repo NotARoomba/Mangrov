@@ -22,17 +22,8 @@
 html, body, #root {
   scroll-behavior: smooth;
   overflow-x: hidden;
+  /* overflow-y: hidden; */
+
   background-color: var(--color-neutral-950)
 }
-
-/* Allow scrolling on specific pages */
-body.allow-scroll {
-  overflow-y: auto;
-}
-
-/* Default behavior for other pages */
-body:not(.allow-scroll) {
-  overflow-y: hidden;
-}
-
 /* @plugin "tailgrids/plugin"; */

@@ -17,7 +17,7 @@ interface ChatWindowProps {
   selectedChat: Chat | null;
   otherUser: User | null;
   messages: Message[];
-  onNavigateToProfile: (userId: string) => void;
+  onNavigateToProfile: (username: string) => void;
   isLoading?: boolean;
 }
 
@@ -271,11 +271,8 @@ export default function ChatWindow({
                   <h2
                     className="text-lg font-semibold text-white cursor-pointer hover:text-primary transition-colors truncate"
                     onClick={() => {
-                      const otherUserId = selectedChat.participants.find(
-                        (id) => id !== user?.uid
-                      );
-                      if (otherUserId) {
-                        onNavigateToProfile(otherUserId);
+                      if (otherUser?.username) {
+                        onNavigateToProfile(otherUser.username);
                       }
                     }}
                   >

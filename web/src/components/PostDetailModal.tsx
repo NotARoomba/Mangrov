@@ -145,23 +145,23 @@ export default function PostDetailModal({
     <motion.div
       {...wrapperAnim}
       transition={{ duration: 0.25 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4"
     >
       <button
         onClick={onClose}
-        className="absolute top-6 right-6 text-white hover:bg-neutral-800 p-2 rounded-lg transition z-50 cursor-pointer"
+        className="absolute top-6 right-6 sm:top-8 sm:right-8 text-white hover:bg-neutral-800/80 p-3 rounded-xl transition-all duration-200 z-50 cursor-pointer backdrop-blur-sm"
       >
-        <X size={22} />
+        <X size={18} className="sm:w-5 sm:h-5" />
       </button>
 
       <motion.div
         key="modal"
         {...wrapperAnim}
         transition={{ duration: 0.3 }}
-        className="bg-neutral-900 text-white w-full max-w-5xl h-[90vh] rounded-xl overflow-hidden flex"
+        className="bg-neutral-900 text-white w-full max-w-5xl h-[95vh] sm:h-[90vh] rounded-xl overflow-hidden flex flex-col lg:flex-row max-h-screen"
       >
-        {/* LEFT */}
-        <div className="w-2/3 bg-black flex items-center justify-center relative">
+        {/* LEFT - Image Section */}
+        <div className="w-full lg:w-2/3 bg-black flex items-center justify-center relative h-1/2 lg:h-full overflow-hidden">
           {!imgLoaded && (
             <div className="absolute inset-0 bg-neutral-800 animate-pulse" />
           )}
@@ -185,13 +185,13 @@ export default function PostDetailModal({
             {post.images.map((img, index) => (
               <div
                 key={index}
-                className="flex justify-center items-center h-full"
+                className="flex justify-center items-center h-full w-full"
               >
                 <img
                   src={img}
                   alt={`Image ${index + 1}`}
                   onLoad={() => setImgLoaded(true)}
-                  className={`max-h-[90vh] w-full object-cover transition-opacity duration-500 ${
+                  className={`h-full w-full object-cover transition-opacity duration-500 ${
                     imgLoaded ? "opacity-100" : "opacity-0"
                   }`}
                 />
@@ -200,13 +200,19 @@ export default function PostDetailModal({
           </Slider>
         </div>
 
-        {/* RIGHT */}
-        <div className="w-1/3 border-l border-neutral-800 flex flex-col justify-between">
-          <div className="p-4 border-b border-neutral-800">
-            <h2 className="text-lg font-semibold">{post.title}</h2>
-            <p className="text-sm text-primary/80">{post.niche}</p>
+        {/* RIGHT - Content Section */}
+        <div className="w-full lg:w-1/3 border-t lg:border-l border-neutral-800 flex flex-col justify-between h-1/2 lg:h-full">
+          <div className="p-3 sm:p-4 border-b border-neutral-800">
+            <h2 className="text-base sm:text-lg font-semibold line-clamp-2">
+              {post.title}
+            </h2>
+            <p className="text-xs sm:text-sm text-primary/80 mt-1">
+              {post.niche}
+            </p>
             {post.description && (
-              <p className="text-sm text-white/80 mt-1">{post.description}</p>
+              <p className="text-xs sm:text-sm text-white/80 mt-1 line-clamp-3">
+                {post.description}
+              </p>
             )}
             <p className="text-xs text-neutral-400 mt-2">
               {post.timestamp?.toDate().toLocaleString()}
@@ -214,11 +220,13 @@ export default function PostDetailModal({
           </div>
 
           {/* Comments Section */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="space-y-3">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 min-h-0">
+            <div className="space-y-2 sm:space-y-3">
               {comments.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-sm text-white/60">No comments yet.</p>
+                <div className="text-center py-4 sm:py-8">
+                  <p className="text-xs sm:text-sm text-white/60">
+                    No comments yet.
+                  </p>
                   <p className="text-xs text-white/40 mt-1">
                     Be the first to comment!
                   </p>
@@ -244,25 +252,25 @@ export default function PostDetailModal({
           </div>
 
           {/* Action Bar */}
-          <div className="border-t border-neutral-800 p-4 space-y-4">
+          <div className="border-t border-neutral-800 p-3 sm:p-4 space-y-3 sm:space-y-4">
             {/* Like, Save, and Other Actions */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 sm:gap-6">
               {post.likes !== false && (
                 <motion.button
                   whileTap={{ scale: 0.9 }}
                   onClick={handleLike}
-                  className="cursor-pointer hover:scale-105 transition-transform"
+                  className="cursor-pointer hover:scale-105 transition-transform p-2"
                 >
                   {liked ? (
                     <Heart
-                      size={22}
-                      className="text-red-500"
+                      size={20}
+                      className="sm:w-6 sm:h-6 text-red-500"
                       fill="currentColor"
                     />
                   ) : (
                     <Heart
-                      size={22}
-                      className="text-white hover:text-red-400"
+                      size={20}
+                      className="sm:w-6 sm:h-6 text-white hover:text-red-400"
                     />
                   )}
                 </motion.button>
@@ -271,32 +279,32 @@ export default function PostDetailModal({
                 <motion.button
                   whileTap={{ scale: 0.9 }}
                   onClick={handleSave}
-                  className="cursor-pointer hover:scale-105 transition-transform"
+                  className="cursor-pointer hover:scale-105 transition-transform p-2"
                 >
                   {saved ? (
                     <Bookmark
-                      size={22}
-                      className="text-primary"
+                      size={20}
+                      className="sm:w-6 sm:h-6 text-primary"
                       fill="currentColor"
                     />
                   ) : (
                     <Bookmark
-                      size={22}
-                      className="text-white hover:text-primary"
+                      size={20}
+                      className="sm:w-6 sm:h-6 text-white hover:text-primary"
                     />
                   )}
                 </motion.button>
               )}
 
-              <div className="ml-auto flex items-center gap-3">
+              <div className="ml-auto flex items-center gap-2 sm:gap-3">
                 <div className="relative" ref={pickerRef}>
                   <button
                     onClick={() => setShowPicker(!showPicker)}
-                    className="cursor-pointer hover:scale-105 transition-transform"
+                    className="cursor-pointer hover:scale-105 transition-transform p-2"
                   >
                     <ShoppingCart
-                      size={22}
-                      className="text-white hover:text-primary"
+                      size={20}
+                      className="sm:w-6 sm:h-6 text-white hover:text-primary"
                     />
                   </button>
 
@@ -315,11 +323,11 @@ export default function PostDetailModal({
                   <a
                     href={`/business/${post.business}`}
                     target="_blank"
-                    className="cursor-pointer hover:scale-105 transition-transform"
+                    className="cursor-pointer hover:scale-105 transition-transform p-2"
                   >
                     <ExternalLink
-                      size={22}
-                      className="text-white hover:text-primary"
+                      size={20}
+                      className="sm:w-6 sm:h-6 text-white hover:text-primary"
                     />
                   </a>
                 )}
@@ -328,10 +336,10 @@ export default function PostDetailModal({
 
             {/* Comment Input */}
             {post.comments !== false && (
-              <div className="flex items-center gap-3 bg-neutral-800/50 rounded-lg p-3">
+              <div className="flex items-center gap-2 sm:gap-3 bg-neutral-800/50 rounded-lg p-2 sm:p-3">
                 <input
                   ref={commentInputRef}
-                  className="flex-1 bg-transparent text-white placeholder-white/60 text-sm outline-none"
+                  className="flex-1 bg-transparent text-white placeholder-white/60 text-xs sm:text-sm outline-none"
                   placeholder="Add a comment..."
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
@@ -342,9 +350,9 @@ export default function PostDetailModal({
                   whileTap={{ scale: 0.95 }}
                   onClick={handleComment}
                   disabled={!newComment.trim() || isSubmitting}
-                  className="text-primary hover:text-primary/80 disabled:text-white/40 disabled:cursor-not-allowed transition-colors"
+                  className="text-primary hover:text-primary/80 disabled:text-white/40 disabled:cursor-not-allowed transition-colors p-1"
                 >
-                  <Send size={18} />
+                  <Send size={16} className="sm:w-5 sm:h-5" />
                 </motion.button>
               </div>
             )}

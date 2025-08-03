@@ -1,20 +1,20 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeftRight, PlusCircle } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 import PageWrapper from "../components/PageWrapper";
 import ImageStrip from "../components/ImageStrip";
 import useWindowSize from "../hooks/useWindowSize";
 import AddBox from "../components/AddBox";
+import MobileNav from "../components/MobileNav";
 
-const wrapperAnim = {
-  initial: { opacity: 0, y: 30 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -20 },
-};
+// const wrapperAnim = {
+//   initial: { opacity: 0, y: 30 },
+//   animate: { opacity: 1, y: 0 },
+//   exit: { opacity: 0, y: -20 },
+// };
 
 export default function AddPage() {
-  const [stage, setStage] = useState<"select" | "form">("select");
-  const [type, setType] = useState<"post" | "trade" | null>(null);
+  const [stage, setStage] = useState<"select" | "form">("form");
+  const [type] = useState<"post" | "trade" | null>("trade");
 
   const buffer = 200; // Distance away from screen for dramatic effect
   const randomX = (direction: "left" | "right", type: "start" | "end") => {
@@ -38,7 +38,7 @@ export default function AddPage() {
   };
 
   const [width, height] = useWindowSize();
-  const [stripData, setStripData] = useState<{
+  const [stripData] = useState<{
     start: { x: number; y: number };
     end: { x: number; y: number };
   }>(() => {
@@ -59,7 +59,7 @@ export default function AddPage() {
     <>
       <PageWrapper className={`relative h-screen overflow-hidden`}>
         <AnimatePresence mode="wait">
-          {stage === "select" && (
+          {/* {stage === "select" && (
             <motion.div
               key="select"
               {...wrapperAnim}
@@ -98,7 +98,7 @@ export default function AddPage() {
                 );
               })}
             </motion.div>
-          )}
+          )} */}
           {stage === "form" && type && (
             <AddBox type={type} setStage={setStage} />
           )}
@@ -319,14 +319,19 @@ export default function AddPage() {
         </AnimatePresence>
       </PageWrapper>
 
-      <ImageStrip
-        start={stripData.start}
-        end={stripData.end}
-        speed={12}
-        className="absolute bottom-0 left-0 opacity-25 w-full h-screen pointer-events-none overflow-hidden"
-        imgHeightTW="h-32 sm:h-40 md:h-44"
-        imgWidthTW="w-44 sm:w-52 md:w-56"
-      />
+      {/* Mobile Navigation */}
+      <MobileNav />
+
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <ImageStrip
+          start={stripData.start}
+          end={stripData.end}
+          speed={12}
+          className="absolute bottom-0 left-0 opacity-25 w-full h-screen"
+          imgHeightTW="h-32 sm:h-40 md:h-44"
+          imgWidthTW="w-44 sm:w-52 md:w-56"
+        />
+      </div>
     </>
   );
 }

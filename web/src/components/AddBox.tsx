@@ -2,7 +2,7 @@ import { ChevronDown, Plus, X } from "lucide-react";
 import { motion } from "framer-motion";
 import Select, { components, type StylesConfig } from "react-select";
 import { INTERESTS } from "../utils/constants";
-import BackButton from "./BackButton";
+// import BackButton from "./BackButton";
 import { Timestamp, addDoc, collection } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useState } from "react";
@@ -224,7 +224,7 @@ export default function AddBox({ type, setStage }: any) {
       {...wrapperAnim}
       className="max-w-2xl mx-auto py-10 px-8 text-white space-y-6 overflow-y-scroll h-screen w-full"
     >
-      <BackButton onClick={() => setStage("select")} />
+      {/* <BackButton onClick={() => setStage("select")} /> */}
       <h2 className="text-2xl font-bold mb-4 capitalize">Add {type}</h2>
       {errors && <p className="text-red-500">{errors}</p>}
 

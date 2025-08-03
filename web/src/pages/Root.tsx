@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 
 import Sidebar from "../components/Sidebar";
+import MobileNav from "../components/MobileNav";
 import "../utils/firebase";
 import { AnimatePresence } from "motion/react";
 import { useAuth } from "../hooks/useAuth";
@@ -27,7 +28,7 @@ export default function Root() {
 
   return (
     <UnreadMessagesProvider>
-      <div className="max-h-screen font-inter bg-transparent-950 text-white">
+      <div className="min-h-screen font-inter bg-transparent-950 text-white">
         {/* <AnimatePresence>
           {spinnerVisible && location.pathname !== "/" && (
             <GlobalSpinner
@@ -37,8 +38,26 @@ export default function Root() {
           )}
         </AnimatePresence> */}
 
-        {showSidebar && <Sidebar />}
-        <main className={`${showSidebar ? "pl-14 md:pl-20" : ""}`}>
+        {/* Desktop Sidebar */}
+        {showSidebar && (
+          <div className="hidden lg:block">
+            <Sidebar />
+          </div>
+        )}
+
+        {/* Mobile Navigation */}
+        {showSidebar && (
+          <div className="lg:hidden">
+            <MobileNav />
+          </div>
+        )}
+
+        {/* Main Content */}
+        <main
+          className={`min-h-screen overflow-y-auto ${
+            showSidebar ? "lg:pl-20" : ""
+          }`}
+        >
           <AnimatePresence mode="wait">
             <Outlet key={location.pathname} />
           </AnimatePresence>

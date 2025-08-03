@@ -46,8 +46,6 @@ export default function About() {
     };
   }, []);
 
-
-
   return (
     <PageWrapper className="min-h-screen bg-neutral-950 overflow-hidden">
       {/* Hero Section */}
@@ -362,23 +360,23 @@ export default function About() {
       </section>
 
       {/* Simple Footer */}
-      <footer className="bg-neutral-950 py-8 px-4 border-t border-neutral-800">
+      <footer className="bg-neutral-950 py-12 px-4 border-t border-neutral-800">
         <div className="max-w-6xl mx-auto text-center">
-          <div className="flex items-center justify-center mb-4">
+          <div className="flex items-center justify-center mb-6">
             <img src="/icon.png" alt="Mangrov Logo" className="w-8 h-8 mr-3" />
             <h3 className="text-2xl font-bold text-white">Mangrov</h3>
           </div>
-          <p className="text-neutral-400 text-sm mb-4">
+          <p className="text-neutral-400 text-base mb-6 leading-relaxed">
             Where personalized shopping meets sustainable brands
           </p>
-          <div className="flex items-center justify-center space-x-6 text-neutral-400">
-            <span className="text-xs">
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-6 text-neutral-400">
+            <span className="text-sm">
               © 2024 Mangrov. All rights reserved.
             </span>
-            <span className="text-xs">•</span>
-            <span className="text-xs">Privacy Policy</span>
-            <span className="text-xs">•</span>
-            <span className="text-xs">Terms of Service</span>
+            <span className="hidden sm:inline text-sm">•</span>
+            <span className="text-sm">Privacy Policy</span>
+            <span className="hidden sm:inline text-sm">•</span>
+            <span className="text-sm">Terms of Service</span>
           </div>
         </div>
       </footer>
@@ -392,7 +390,7 @@ export default function About() {
         }}
         transition={{ duration: 0.3 }}
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className="fixed bottom-8 right-8 z-50 bg-primary text-white p-4 rounded-full shadow-lg hover:bg-primary/80 transition-colors"
+        className="fixed bottom-20 right-8 z-50 bg-primary text-white p-4 rounded-full shadow-lg hover:bg-primary/80 transition-colors"
       >
         <ArrowUp className="w-6 h-6" />
       </motion.button>

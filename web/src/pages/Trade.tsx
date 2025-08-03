@@ -945,7 +945,19 @@ export default function Trade() {
                                   className="text-primary font-semibold cursor-pointer hover:underline transition-colors"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    navigate(`/user/${otherUserId}`);
+                                    // Find the username for the other user
+                                    // const otherUser = matches.find(
+                                    //   (match) =>
+                                    //     match.fromUser === otherUserId ||
+                                    //     match.toUser === otherUserId
+                                    // );
+                                    const otherUserName =
+                                      otherUserId === match.fromUser
+                                        ? match.fromUserName
+                                        : match.toUserName;
+                                    if (otherUserName) {
+                                      navigate(`/user/${otherUserName}`);
+                                    }
                                   }}
                                 >
                                   {otherUserName}

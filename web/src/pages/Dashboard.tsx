@@ -147,20 +147,20 @@ export default function Dashboard() {
   }
 
   return (
-    <PageWrapper className="flex h-screen w-full bg-neutral-950 text-white overflow-hidden">
-      <div className="flex-1 p-6 overflow-y-auto">
+    <PageWrapper className="min-h-screen w-full bg-neutral-950 text-white">
+      <div className="p-4 sm:p-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-6 sm:mb-8"
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-4xl font-bold">
+              <h1 className="text-2xl sm:text-4xl font-bold">
                 {getGreeting()}, {userData?.name || user?.displayName || "User"}
               </h1>
-              <p className="text-neutral-400 mt-1">
+              <p className="text-neutral-400 mt-1 text-sm sm:text-base">
                 {userData?.country && (
                   <span className="flex items-center gap-2">
                     <span>{getFlagEmoji(userData.country)}</span>
@@ -176,21 +176,21 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8"
         >
           <StatCard
             title="Active Trades"
             value={stats.totalTrades}
             icon={<TrendingUp className="w-5 h-5" />}
             color="text-green-400"
-            onClick={() => navigate("/profile?tab=trades")}
+            onClick={() => navigate("/user?tab=trades")}
           />
           <StatCard
             title="Saved Posts"
             value={stats.savedPosts}
             icon={<Bookmark className="w-5 h-5" />}
             color="text-blue-400"
-            onClick={() => navigate("/profile?tab=saved")}
+            onClick={() => navigate("/user?tab=saved")}
           />
           <StatCard
             title="Unread Messages"
@@ -209,29 +209,31 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Search & Interests */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="lg:col-span-2 bg-neutral-900 rounded-2xl p-6"
+            className="lg:col-span-2 bg-neutral-900 rounded-xl sm:rounded-2xl p-4 sm:p-6"
           >
-            <div className="flex items-center gap-3 mb-6">
-              <Search className="w-6 h-6 text-primary" />
-              <h2 className="text-2xl font-bold">Discover Interests</h2>
+            <div className="flex items-center gap-3 mb-4 sm:mb-6">
+              <Search className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+              <h2 className="text-xl sm:text-2xl font-bold">
+                Discover Interests
+              </h2>
             </div>
 
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <input
                 type="text"
                 placeholder="Search interests..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-neutral-800 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full bg-neutral-800 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm sm:text-base"
               />
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 max-h-80 sm:max-h-96 overflow-y-auto">
               {filteredInterests.map((interest) => (
                 <InterestCard
                   key={interest.id}
@@ -247,14 +249,14 @@ export default function Dashboard() {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-neutral-900 rounded-2xl p-6"
+            className="bg-neutral-900 rounded-xl sm:rounded-2xl p-4 sm:p-6"
           >
             {/* Recent Trades Section */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Recent Trades</h2>
+            <div className="mb-6 sm:mb-8">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold">Recent Trades</h2>
                 <Link
-                  to="/profile?tab=trades"
+                  to="/user?tab=trades"
                   className="text-primary hover:underline text-sm"
                 >
                   View All
@@ -286,10 +288,10 @@ export default function Dashboard() {
 
             {/* Saved Posts Section */}
             <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Saved Posts</h2>
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold">Saved Posts</h2>
                 <Link
-                  to="/profile?tab=saved"
+                  to="/user?tab=saved"
                   className="text-primary hover:underline text-sm"
                 >
                   View All
@@ -321,9 +323,9 @@ export default function Dashboard() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="lg:col-span-3 bg-neutral-900 rounded-2xl p-6"
+            className="lg:col-span-3 bg-neutral-900 rounded-xl sm:rounded-2xl p-4 sm:p-6"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
                 <h2 className="text-3xl font-bold mb-2">Mangrov</h2>
                 <p className="text-neutral-400">
@@ -332,18 +334,18 @@ export default function Dashboard() {
                   <span className="text-primary"> memorable experiences</span>
                 </p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-row items-center gap-3 sm:gap-4">
                 <Link
                   to="/about"
-                  className="border-2 border-primary rounded-lg bg-transparent tracking-widest text-white px-8 py-2 uppercase font-bold hover:bg-primary transition-all duration-300"
+                  className="border-2 border-primary rounded-lg bg-transparent tracking-widest text-white px-4 sm:px-8 py-1.5 sm:py-2 text-xs sm:text-sm uppercase font-bold hover:bg-primary transition-all duration-300"
                 >
                   About
                 </Link>
                 <Link to="https://instagram.com/_mangrov_" target="_blank">
-                  <SiInstagram className="text-white w-8 h-8 hover:text-primary transition-colors" />
+                  <SiInstagram className="text-white w-6 h-6 sm:w-8 sm:h-8 hover:text-primary transition-colors" />
                 </Link>
                 <Link to="https://youtube.com" target="_blank">
-                  <SiYoutube className="text-white w-8 h-8 hover:text-primary transition-colors" />
+                  <SiYoutube className="text-white w-6 h-6 sm:w-8 sm:h-8 hover:text-primary transition-colors" />
                 </Link>
               </div>
             </div>

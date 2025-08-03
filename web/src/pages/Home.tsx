@@ -94,14 +94,16 @@ export default function Home() {
       </motion.div>
 
       {/* Floating Image Strip */}
-      <ImageStrip
-        start={{ x: -200, y: (height * 3) / 4 }}
-        end={{ x: (width + 400) / 2, y: -300 }}
-        speed={12}
-        className="absolute bottom-0 left-0 w-full h-screen pointer-events-none overflow-hidden"
-        imgHeightTW="h-32 sm:h-40 md:h-44"
-        imgWidthTW="w-44 sm:w-52 md:w-56"
-      />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <ImageStrip
+          start={{ x: -200, y: (height * 3) / 4 }}
+          end={{ x: (width + 400) / 2, y: -300 }}
+          speed={12}
+          className="absolute bottom-0 left-0 w-full h-screen"
+          imgHeightTW="h-32 sm:h-40 md:h-44"
+          imgWidthTW="w-44 sm:w-52 md:w-56"
+        />
+      </div>
     </motion.div>
   );
 }

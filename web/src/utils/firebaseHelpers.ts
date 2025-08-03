@@ -49,6 +49,30 @@ export const fetchUserData = async (userId: string) => {
 };
 
 /**
+ * Fetches user data by username
+ * @param username - The username to fetch data for
+ * @returns Promise with user data or null if not found
+ */
+export const fetchUserByUsername = async (username: string) => {
+  try {
+    const usersQuery = query(
+      collection(db, "users"),
+      where("username", "==", username)
+    );
+    const usersSnap = await getDocs(usersQuery);
+    
+    if (!usersSnap.empty) {
+      const userDoc = usersSnap.docs[0];
+      return { uid: userDoc.id, ...userDoc.data() };
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching user by username:", error);
+    return null;
+  }
+};
+
+/**
  * Fetches user's trades by user ID
  * @param userId - The user ID to fetch trades for
  * @returns Promise with array of trades
