@@ -21,9 +21,9 @@ import { isValidUsername } from "../utils/helpers";
 import { checkUsernameExists } from "../utils/firebaseHelpers";
 
 const primaryBtn =
-  "bg-primary text-primary-foreground hover:bg-primary/80 cursor-pointer transition-all duration-200 active:scale-95 uppercase tracking-widest font-bold disabled:opacity-40 disabled:cursor-not-allowed";
+  "bg-primary text-primary-foreground hover:bg-primary/80 cursor-pointer transition-all duration-200 active:scale-95 uppercase tracking-widest font-bold disabled:opacity-40 disabled:cursor-not-allowed py-3 sm:py-2 text-base sm:text-sm";
 const mutedInput =
-  "rounded-md bg-muted px-3 py-2 text-sm sm:text-base outline-none focus:ring-2 ring-primary/80 transition-all duration-200";
+  "rounded-md bg-muted px-3 py-3 sm:py-2 text-base sm:text-base outline-none focus:ring-2 ring-primary/80 transition-all duration-200 w-full";
 
 const wrapperAnim = {
   initial: { opacity: 0, y: 30 },
@@ -100,8 +100,10 @@ export default function AuthBox() {
     if (!emailValid) return setErrors("Please enter a valid email address");
     try {
       const methods = await fetchSignInMethodsForEmail(auth, email);
-      setIsExistingUser(methods.length > 0);
-      setStage(methods.length > 0 ? "verify" : "basic");
+      const isExisting = methods.length > 0;
+      console.log("Email check result:", { email, isExisting, methods });
+      setIsExistingUser(isExisting);
+      setStage(isExisting ? "verify" : "basic");
     } catch (err) {
       setErrors("Failed to check email. Please try again later.");
     }
@@ -169,11 +171,11 @@ export default function AuthBox() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-sm px-4 pt-6 sm:px-6 text-center">
+    <div className="mx-auto w-full max-w-sm px-4 py-8 sm:px-6 sm:py-12 text-center">
       <motion.img
         src="/icon.png"
         alt="logo"
-        className="w-24 h-24 mx-auto mb-2"
+        className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6"
         initial={{ y: -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: "backOut" }}
@@ -185,10 +187,10 @@ export default function AuthBox() {
         </div>
       ) : user ? (
         <motion.div {...wrapperAnim} className="mt-4">
-          <h2 className="text-2xl sm:text-3xl font-extrabold mb-0 text-white">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold mb-2 text-white">
             Welcome
           </h2>
-          <p className="text-sm sm:text-base mb-4 text-white/70">
+          <p className="text-sm sm:text-base mb-6 text-white/70">
             Continue to your <span className="text-primary">dashboard</span>.
           </p>
           <motion.button
@@ -227,10 +229,10 @@ export default function AuthBox() {
           <AnimatePresence mode="wait">
             {stage === "email" && (
               <motion.div key="email" {...wrapperAnim}>
-                <h2 className="text-2xl sm:text-3xl font-extrabold mb-0 text-white">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold mb-2 text-white">
                   Welcome
                 </h2>
-                <p className="text-sm sm:text-base mb-6">
+                <p className="text-sm sm:text-base mb-6 text-white/70">
                   Enter your <span className="text-primary">email</span> to
                   continue.
                 </p>
@@ -266,10 +268,10 @@ export default function AuthBox() {
 
             {stage === "basic" && (
               <motion.div key="basic" {...wrapperAnim}>
-                <h2 className="text-2xl sm:text-3xl font-extrabold mb-0 text-white">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold mb-2 text-white">
                   Basic Info
                 </h2>
-                <p className="text-sm sm:text-base mb-5">
+                <p className="text-sm sm:text-base mb-6 text-white/70">
                   Let us get to <span className="text-primary">know</span> you
                   better.
                 </p>
@@ -362,10 +364,10 @@ export default function AuthBox() {
 
             {stage === "interests" && (
               <motion.div key="interests" {...wrapperAnim}>
-                <h2 className="text-2xl sm:text-3xl font-extrabold mb-0 text-white">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold mb-2 text-white">
                   Interests
                 </h2>
-                <p className="text-sm sm:text-base mb-4">
+                <p className="text-sm sm:text-base mb-6 text-white/70">
                   These help us{" "}
                   <span className="text-primary">personalize</span> your
                   experience.
@@ -377,7 +379,7 @@ export default function AuthBox() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className={`w-full mb-4 ${mutedInput}`}
                 />
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-72 overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 max-h-64 sm:max-h-72 overflow-y-auto pr-1">
                   {INTERESTS.filter(({ label }) =>
                     label.toLowerCase().includes(searchTerm.toLowerCase())
                   ).map(({ id, label, img }) => {
@@ -400,14 +402,14 @@ export default function AuthBox() {
                         <img
                           src={img}
                           alt={label}
-                          className="w-full h-20 sm:h-24 object-cover"
+                          className="w-full h-16 sm:h-20 md:h-24 object-cover"
                         />
                         {isSelected && (
                           <div className="absolute top-1 right-1 bg-primary p-1 rounded-full">
                             <Check size={14} className="text-white" />
                           </div>
                         )}
-                        <p className="text-xs mt-2 px-1 pb-2 truncate">
+                        <p className="text-xs sm:text-sm mt-1 sm:mt-2 px-1 pb-2 truncate">
                           {label}
                         </p>
                       </div>
@@ -428,11 +430,11 @@ export default function AuthBox() {
 
             {stage === "verify" && (
               <motion.div key="verify" {...wrapperAnim}>
-                <h2 className="text-2xl sm:text-3xl font-extrabold mb-0 text-white">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold mb-2 text-white">
                   {" "}
                   {isExistingUser ? "Enter Password" : "Create Password"}
                 </h2>
-                <p className="text-sm sm:text-base mb-6">
+                <p className="text-sm sm:text-base mb-6 text-white/70">
                   {isExistingUser
                     ? "Welcome back, please enter your password."
                     : "Create a strong password to finish signing up."}
@@ -458,6 +460,18 @@ export default function AuthBox() {
                 >
                   Continue
                 </motion.button>
+                {isExistingUser && (
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                      console.log("Reset password button clicked");
+                      navigate("/reset-password");
+                    }}
+                    className="w-full mt-3 text-sm text-primary hover:text-primary/80 transition-colors cursor-pointer py-2 px-4 rounded-md hover:bg-primary/10 border border-primary/20"
+                  >
+                    Forgot your password?
+                  </motion.button>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

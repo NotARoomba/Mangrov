@@ -10,11 +10,13 @@ import {
   ArrowLeftRight,
   Menu,
   X,
+  LogOut,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../hooks/useCart";
 import { useUnreadMessages } from "../hooks/useUnreadMessages";
 import { useAuth } from "../hooks/useAuth";
+import ConfirmDialog from "./ConfirmDialog";
 
 const SIZE = 24;
 
@@ -30,11 +32,12 @@ const links = [
 
 export default function MobileNav() {
   const [isOpen, setIsOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { totalItems } = useCart();
   const { totalUnread } = useUnreadMessages();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [userUsername, setUserUsername] = useState<string | null>(null);
 
   // Fetch user's username
@@ -72,6 +75,15 @@ export default function MobileNav() {
       }
     } else {
       navigate(to, { replace: true });
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
     }
   };
 
@@ -224,6 +236,17 @@ export default function MobileNav() {
               </div>
             </nav>
 
+            {/* Logout Section */}
+            <div className="p-4 border-t border-white/10">
+              <button
+                onClick={() => setShowLogoutConfirm(true)}
+                className="w-full flex items-center gap-4 p-4 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200"
+              >
+                <LogOut size={SIZE} />
+                <span className="font-medium">Logout</span>
+              </button>
+            </div>
+
             {/* Footer */}
             <div className="p-4 border-t border-white/10">
               <div className="text-center">
@@ -233,6 +256,18 @@ export default function MobileNav() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Logout Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+        title="Logout"
+        message="Are you sure you want to logout? You'll need to sign in again to access your account."
+        confirmText="Logout"
+        cancelText="Cancel"
+        type="warning"
+      />
     </>
   );
 }

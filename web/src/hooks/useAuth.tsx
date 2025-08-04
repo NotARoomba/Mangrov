@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { auth } from "../utils/firebase";
+import { signOut as firebaseSignOut } from "firebase/auth";
 import type { User } from "firebase/auth";
 
 // Define shape of auth state
@@ -13,6 +14,7 @@ type AuthState = {
   isSignedIn: boolean;
   pending: boolean;
   user: User | null;
+  signOut: () => Promise<void>;
 };
 
 // Create context
@@ -26,15 +28,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isSignedIn: false,
     pending: true,
     user: null,
+    signOut: async () => {
+      try {
+        await firebaseSignOut(auth);
+      } catch (error) {
+        console.error("Error signing out:", error);
+      }
+    },
   });
 
   useEffect(() => {
     const unregisterAuthObserver = auth.onAuthStateChanged((user) =>
-      setAuthState({
+      setAuthState((prev) => ({
+        ...prev,
         user,
         pending: false,
         isSignedIn: !!user,
-      })
+      }))
     );
     return () => unregisterAuthObserver();
   }, []);

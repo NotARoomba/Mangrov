@@ -42,7 +42,7 @@ export default function Home() {
     >
       {/* Left Text Content */}
       <motion.div
-        className="w-full md:w-1/2 px-6 py-12 md:p-20 flex flex-col min-h-screen justify-start md:justify-between text-center md:text-left space-y-8"
+        className="w-full md:w-1/2 px-6 py-8 md:p-20 flex flex-col min-h-screen justify-start md:justify-between text-center md:text-left space-y-6 md:space-y-8"
         variants={containerVariants}
       >
         <motion.h1
@@ -53,7 +53,7 @@ export default function Home() {
         </motion.h1>
 
         <motion.p
-          className="text-lg sm:text-2xl md:text-3xl xl:text-4xl leading-relaxed text-neutral-300"
+          className="text-base sm:text-lg md:text-3xl xl:text-4xl leading-relaxed text-neutral-300"
           variants={itemVariants}
         >
           A{" "}
@@ -66,7 +66,7 @@ export default function Home() {
 
         {/* AuthBox for small screens */}
         <motion.div
-          className="block md:hidden"
+          className="block md:hidden mt-4"
           variants={itemVariants}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

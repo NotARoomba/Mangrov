@@ -14,6 +14,8 @@ import TradeDetail from "./pages/TradeDetail";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import Cart from "./pages/Cart";
+import ResetPassword from "./pages/ResetPassword";
+import AuthAction from "./pages/AuthAction";
 import Error from "./pages/Error";
 import { CartProvider } from "./hooks/useCart";
 import { AuthProvider } from "./hooks/useAuth";
@@ -63,6 +65,14 @@ const router = createBrowserRouter([
       {
         path: "user/:username?",
         Component: Profile,
+      },
+      {
+        path: "reset-password",
+        Component: ResetPassword,
+      },
+      {
+        path: "auth/action",
+        Component: AuthAction,
       },
     ],
     errorElement: <Error />,

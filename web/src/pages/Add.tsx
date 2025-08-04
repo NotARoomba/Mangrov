@@ -319,8 +319,10 @@ export default function AddPage() {
         </AnimatePresence>
       </PageWrapper>
 
-      {/* Mobile Navigation */}
-      <MobileNav />
+      {/* Mobile Navigation - Only show on mobile */}
+      <div className="lg:hidden">
+        <MobileNav />
+      </div>
 
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <ImageStrip

@@ -14,13 +14,20 @@ export default function Root() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const showSidebar = !["/", "/about"].includes(location.pathname);
+  const showSidebar = ![
+    "/",
+    "/about",
+    "/reset-password",
+    "/auth/action",
+  ].includes(location.pathname);
 
   useEffect(() => {
     if (
       !pending &&
       !isSignedIn &&
-      !["/", "/about"].includes(location.pathname)
+      !["/", "/about", "/reset-password", "/auth/action"].includes(
+        location.pathname
+      )
     ) {
       navigate("/");
     }
