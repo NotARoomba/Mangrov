@@ -5,12 +5,7 @@ import React, {
   useEffect,
   useMemo,
 } from "react";
-import {
-  onSnapshot,
-  collection,
-  query,
-  where,
-} from "firebase/firestore";
+import { onSnapshot, collection, query, where } from "firebase/firestore";
 import { db } from "../utils/firebase";
 import { useAuth } from "./useAuth";
 
@@ -50,10 +45,9 @@ export const UnreadMessagesProvider = ({
       return;
     }
 
-    // Listen to messages where the current user is not the sender
+    // Listen to all unread messages and filter them properly
     const messagesQuery = query(
       collection(db, "messages"),
-      where("senderId", "!=", user.uid),
       where("read", "==", false)
     );
 
@@ -65,6 +59,16 @@ export const UnreadMessagesProvider = ({
 
         // Skip system messages
         if (messageData.isSystemMessage) {
+          return;
+        }
+
+        // Skip messages sent by the current user
+        if (messageData.senderId === user.uid) {
+          return;
+        }
+
+        // Skip messages that don't have a chatId
+        if (!messageData.chatId) {
           return;
         }
 
