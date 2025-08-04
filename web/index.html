@@ -4,7 +4,18 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mangrov</title>
+    <title>Mangrov - Sustainable Shopping Platform</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta
+      name="description"
+      content="Shop through sustainable products enabling memorable experiences. Discover eco-friendly products and connect with like-minded individuals."
+    />
+    <meta
+      name="keywords"
+      content="sustainable shopping, eco-friendly products, green marketplace, sustainable fashion, ethical shopping"
+    />
+    <meta name="author" content="Mangrov" />
+
     <link rel="preconnect" href="https://rsms.me/" />
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
     <link href="/src/index.css" rel="stylesheet" />
@@ -35,6 +46,28 @@
           );
         }
       })(window.location);
+
+      // Additional script to handle direct navigation to routes with query parameters
+      // This ensures that URLs like /user?tab=trades work correctly
+      (function () {
+        var path = window.location.pathname;
+        var search = window.location.search;
+        var hash = window.location.hash;
+
+        // If we're not on the root path and there's no redirect parameter,
+        // we need to handle this as a direct navigation
+        if (path !== "/" && path !== "/index.html" && !search.includes("?/")) {
+          // Store the current URL for the SPA to handle
+          sessionStorage.setItem("spa-redirect", path + search + hash);
+
+          // Also handle the case where we're directly accessing a route with query params
+          // by redirecting to the root with the path as a query parameter
+          if (search && !search.includes("?/")) {
+            var newSearch = "?/" + path.slice(1) + search.replace("?", "&");
+            window.history.replaceState(null, null, "/" + newSearch + hash);
+          }
+        }
+      })();
     </script>
   </head>
   <body>
