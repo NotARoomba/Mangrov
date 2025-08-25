@@ -17,6 +17,8 @@ export default function Root() {
   const showSidebar = ![
     "/",
     "/about",
+    "/terms-of-service",
+    "/privacy-policy",
     "/reset-password",
     "/auth/action",
   ].includes(location.pathname);
@@ -25,9 +27,14 @@ export default function Root() {
     if (
       !pending &&
       !isSignedIn &&
-      !["/", "/about", "/reset-password", "/auth/action"].includes(
-        location.pathname
-      )
+      ![
+        "/",
+        "/about",
+        "/terms-of-service",
+        "/privacy-policy",
+        "/reset-password",
+        "/auth/action",
+      ].includes(location.pathname)
     ) {
       navigate("/");
     }

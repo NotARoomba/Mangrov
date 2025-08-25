@@ -374,9 +374,19 @@ export default function About() {
               © 2024 Mangrov. All rights reserved.
             </span>
             <span className="hidden sm:inline text-sm">•</span>
-            <span className="text-sm">Privacy Policy</span>
+            <span
+              className="text-sm cursor-pointer hover:text-primary transition-colors"
+              onClick={() => navigate("/terms-of-service")}
+            >
+              Terms of Service
+            </span>
             <span className="hidden sm:inline text-sm">•</span>
-            <span className="text-sm">Terms of Service</span>
+            <span
+              className="text-sm cursor-pointer hover:text-primary transition-colors"
+              onClick={() => navigate("/privacy-policy")}
+            >
+              Privacy Policy
+            </span>
           </div>
         </div>
       </footer>

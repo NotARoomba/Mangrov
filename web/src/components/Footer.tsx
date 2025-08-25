@@ -25,6 +25,18 @@ export default function Footer() {
           >
             About
           </Link>
+          <Link
+            to="/terms-of-service"
+            className="border-2 border-neutral-600 rounded-lg bg-transparent tracking-widest text-white px-6 py-2 uppercase font-bold hover:border-primary hover:text-primary transition-all duration-300"
+          >
+            Terms
+          </Link>
+          <Link
+            to="/privacy-policy"
+            className="border-2 border-neutral-600 rounded-lg bg-transparent tracking-widest text-white px-6 py-2 uppercase font-bold hover:border-primary hover:text-primary transition-all duration-300"
+          >
+            Privacy
+          </Link>
           <Link to="https://instagram.com/_mangrov_" target="_blank">
             <SiInstagram className="text-white w-8 h-8 hover:text-primary transition-colors" />
           </Link>

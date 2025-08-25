@@ -6,6 +6,8 @@ import { createBrowserRouter, RouterProvider } from "react-router";
 import Root from "./pages/Root";
 import Home from "./pages/Home";
 import About from "./pages/About";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Dashboard from "./pages/Dashboard";
 import Search from "./pages/Search";
 import Add from "./pages/Add";
@@ -30,6 +32,8 @@ const router = createBrowserRouter([
         Component: Home,
       },
       { path: "about", Component: About },
+      { path: "terms-of-service", Component: TermsOfService },
+      { path: "privacy-policy", Component: PrivacyPolicy },
       {
         path: "dashboard",
         Component: Dashboard,

@@ -349,7 +349,25 @@ export default function Dashboard() {
                 </Link>
               </div>
             </div>
-            <p className="text-xs text-neutral-500 mt-4">© 2025 Mangrov</p>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-6 text-neutral-400">
+              <p className="text-xs text-neutral-500 mt-4">© 2025 Mangrov</p>
+              <p className="text-xs text-neutral-500 mt-4">
+                <span
+                  className="text-sm cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => (window.location.href = "/terms-of-service")}
+                >
+                  Terms of Service
+                </span>
+              </p>
+              <p className="text-xs text-neutral-500 mt-4">
+                <span
+                  className="text-sm cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => (window.location.href = "/privacy-policy")}
+                >
+                  Privacy Policy
+                </span>
+              </p>
+            </div>
           </motion.div>
         </div>
       </div>
