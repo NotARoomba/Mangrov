@@ -2,7 +2,7 @@ export const translations = {
   termsOfService: {
     en: {
       title: "Terms of Service",
-      lastUpdated: "Last updated: December 2024",
+      lastUpdated: "Last updated: August 2025",
       subtitle: "Terms and Conditions",
       sections: {
         purpose: {
@@ -73,7 +73,7 @@ export const translations = {
     },
     es: {
       title: "Términos de Servicio",
-      lastUpdated: "Última actualización: Diciembre 2024",
+      lastUpdated: "Última actualización: Agosto 2025",
       subtitle: "Términos y Condiciones",
       sections: {
         purpose: {
@@ -146,7 +146,7 @@ export const translations = {
   privacyPolicy: {
     en: {
       title: "Privacy Policy",
-      lastUpdated: "Last updated: December 2024",
+      lastUpdated: "Last updated: August 2025",
       subtitle: "Privacy Policy",
       description: "At Mangrov, we value and respect your privacy. This Privacy Policy explains how we collect, use, store, and protect your personal data when you use our app.",
       sections: {
@@ -216,7 +216,7 @@ export const translations = {
     },
     es: {
       title: "Política de Privacidad",
-      lastUpdated: "Última actualización: Diciembre 2024",
+      lastUpdated: "Última actualización: Agosto 2025",
       subtitle: "Política de Privacidad",
       description: "En Mangrov valoramos y respetamos tu privacidad. Esta Política de Privacidad explica cómo recopilamos, utilizamos, almacenamos y protegemos tus datos personales cuando usas nuestra aplicación.",
       sections: {
